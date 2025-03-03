@@ -3,11 +3,15 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter
 
 from models.models import Any, ErrorResponse, RunCreateStateless, Union
 
+
 router = APIRouter(tags=["Stateless Runs"])
+logger = logging.getLogger(__name__)  # This will be "app.api.routes.<name>"
 
 
 @router.post(
