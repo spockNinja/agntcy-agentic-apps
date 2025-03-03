@@ -2,60 +2,82 @@
 # Usage: python3 client/rest.py
 
 import json
-import logging
 import traceback
-import os
 from typing import TypedDict, List, Dict
+import uuid
 
+from dotenv import find_dotenv, load_dotenv
 import requests
 from requests.exceptions import RequestException, HTTPError, Timeout, ConnectionError
 
-from langchain_core.messages import HumanMessage, BaseMessage
-from langgraph.graph import START, END, StateGraph, CompiledGraph
+from langchain_core.messages import HumanMessage, BaseMessage, AIMessage
+from langgraph.graph import START, END, StateGraph
 
-# Log file path
-LOG_FILE = "graph_client.log"
+from typing import Dict, Any
+from logging_config import configure_logging
 
-# Remove existing log file before a new run
-if os.path.exists(LOG_FILE):
-    os.remove(LOG_FILE)
-
-
-# Configure structured JSON logging
-class JSONFormatter(logging.Formatter):
-    """Custom JSON formatter for structured logs."""
-
-    def format(self, record):
-        log_data = {
-            "timestamp": self.formatTime(record),
-            "level": record.levelname,
-            "message": record.getMessage(),
-        }
-        if record.exc_info:
-            log_data["error"] = {
-                "type": str(record.exc_info[0]),
-                "message": str(record.exc_info[1]),
-                "stack_trace": traceback.format_exc(),
-            }
-        return json.dumps(log_data)
-
-
-# Set up logger with both console and file handlers
-logger = logging.getLogger("json_logger")
-logger.setLevel(logging.INFO)
-
-# Console handler
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(JSONFormatter())
-logger.addHandler(console_handler)
-
-# File handler
-file_handler = logging.FileHandler(LOG_FILE)
-file_handler.setFormatter(JSONFormatter())
-logger.addHandler(file_handler)
+# Initialize logger
+logger = configure_logging()
 
 # URL for the Remote Graph Server /runs endpoint
-REMOTE_SERVER_URL = "http://127.0.0.1:8123/runs"
+REMOTE_SERVER_URL = "http://127.0.0.1:8123/api/v1/runs"
+
+
+def load_environment_variables(env_file: str | None = None) -> None:
+    """
+    Load environment variables from a .env file safely.
+
+    This function loads environment variables from a `.env` file, ensuring
+    that critical configurations are set before the application starts.
+
+    Args:
+        env_file (str | None): Path to a specific `.env` file. If None,
+                               it searches for a `.env` file automatically.
+
+    Behavior:
+    - If `env_file` is provided, it loads the specified file.
+    - If `env_file` is not provided, it attempts to locate a `.env` file in the project directory.
+    - Logs a warning if no `.env` file is found.
+
+    Returns:
+        None
+    """
+    env_path = env_file or find_dotenv()
+
+    if env_path:
+        load_dotenv(env_path, override=True)
+        logger.info(f".env file loaded from {env_path}")
+    else:
+        logger.warning("No .env file found. Ensure environment variables are set.")
+
+
+def decode_response(response_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Decodes the JSON response from the remote server and extracts relevant information.
+
+    Args:
+        response_data (Dict[str, Any]): The JSON response from the server.
+
+    Returns:
+        Dict[str, Any]: A structured dictionary containing extracted response fields.
+    """
+    try:
+        agent_id = response_data.get("agent_id", "Unknown")
+        output = response_data.get("output", {})
+        model = response_data.get("model", "Unknown")
+        metadata = response_data.get("metadata", {})
+
+        # Extract messages if present
+        messages = output.get("messages", [])
+
+        return {
+            "agent_id": agent_id,
+            "messages": messages,
+            "model": model,
+            "metadata": metadata,
+        }
+    except Exception as e:
+        return {"error": f"Failed to decode response: {str(e)}"}
 
 
 # Define the graph state
@@ -90,15 +112,20 @@ def node_remote_request_stateless(state: GraphState) -> Dict[str, List[BaseMessa
         "Content-Type": "application/json",
     }
 
-    # Payload for the request
-    payload = json.dumps({"input": [{"query": query}]})
+    # payload to send to autogen server at /runs endpoint
+    payload = {
+        "agent_id": "remote_agent",
+        "input": {"messages": [HumanMessage(query).model_dump()]},
+        "model": "gpt-4o",
+        "metadata": {"id": str(uuid.uuid4())},
+    }
 
     # Use a session for efficiency
     session = requests.Session()
 
     try:
         response = session.post(
-            REMOTE_SERVER_URL, headers=headers, data=payload, timeout=10
+            REMOTE_SERVER_URL, headers=headers, json=payload, timeout=10
         )
 
         # Raise exception for HTTP errors
@@ -106,17 +133,12 @@ def node_remote_request_stateless(state: GraphState) -> Dict[str, List[BaseMessa
 
         # Parse response as JSON
         response_data = response.json()
-        logger.info(
-            json.dumps(
-                {
-                    "event": "received_response",
-                    "status_code": response.status_code,
-                    "response_body": response_data,
-                }
-            )
-        )
+        # Decode JSON response
+        decoded_response = decode_response(response_data)
 
-        return {"messages": [HumanMessage(content=json.dumps(response_data))]}
+        logger.info(decoded_response)
+
+        return {"messages": decoded_response.get("messages", [])}
 
     except (Timeout, ConnectionError) as conn_err:
         error_msg = {
@@ -152,14 +174,15 @@ def node_remote_request_stateless(state: GraphState) -> Dict[str, List[BaseMessa
             "stack_trace": traceback.format_exc(),
         }
         logger.error(json.dumps(error_msg))
-        return {"messages": [HumanMessage(content=json.dumps(error_msg))]}
 
     finally:
         session.close()
 
+    return {"messages": [AIMessage(content=json.dumps(error_msg))]}
+
 
 # Build the state graph
-def build_graph() -> CompiledGraph:
+def build_graph() -> Any:
     """
     Constructs the state graph for handling requests.
 
@@ -175,15 +198,9 @@ def build_graph() -> CompiledGraph:
 
 # Main execution
 if __name__ == "__main__":
-    # Construct the graph
+
     graph = build_graph()
-
-    # Define input state
     inputs = {"messages": [HumanMessage(content="Write a story about a cat")]}
-
-    # Invoke the graph
-    logger.info(json.dumps({"event": "invoking_graph", "inputs": inputs}))
+    logger.info({"event": "invoking_graph", "inputs": inputs})
     result = graph.invoke(inputs)
-
-    # Log final response
-    logger.info(json.dumps({"event": "final_result", "result": result}))
+    logger.info({"event": "final_result", "result": result})    
