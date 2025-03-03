@@ -45,16 +45,21 @@ python main.py
 
 On a successful run, you should see logs in your terminal similar to the snippet below. The exact timestamps, process IDs, and file paths will vary:
 
-```plaintext
-.\main.py
-2025-03-03 12:06:25,242 - INFO - app - Logging is initialized. This should appear in the log file.
-2025-03-03 12:06:25,243 - INFO - app - Starting FastAPI application...
-2025-03-03 12:06:25,244 - INFO - root - .env file loaded from E:\Dropbox\GitHub\remote_graphs\.env
-INFO:     Started server process [26904]
+```bash
+python .\main.py
+{"timestamp": "2025-03-03 12:18:40,163", "level": "INFO", "message": "Logging is initialized. This should appear in the log file.", "module": "logging_config", "function": "configure_logging", "line": 142, "logger": "app", "pid": 25372}
+{"timestamp": "2025-03-03 12:18:40,163", "level": "INFO", "message": "Starting FastAPI application...", "module": "main", "function": "main", "line": 203, "logger": "app", "pid": 25372}
+{"timestamp": "2025-03-03 12:18:40,164", "level": "INFO", "message": ".env file loaded from .env", "module": "main", "function": "load_environment_variables", "line": 43, "logger": "root", "pid": 25372}    
+INFO:     Started server process [25372]
 INFO:     Waiting for application startup.
-2025-03-03 12:06:25,269 - INFO - root - Starting Remote Graphs App...
+{"timestamp": "2025-03-03 12:18:40,192", "level": "INFO", "message": "Starting Remote Graphs App...", "module": "main", "function": "lifespan", "line": 67, "logger": "root", "pid": 25372}
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8123 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+{"timestamp": "2025-03-03 12:18:52,935", "level": "INFO", "message": "Application shutdown", "module": "main", "function": "lifespan", "line": 74, "logger": "root", "pid": 25372}
+INFO:     Application shutdown complete.
+INFO:     Finished server process [25372]
 ```
 
 This output confirms that:
