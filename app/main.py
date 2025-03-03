@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 import os
 import logging
 from typing import AsyncGenerator
@@ -44,6 +45,7 @@ def load_environment_variables(env_file: str | None = None) -> None:
         logging.warning("No .env file found. Ensure environment variables are set.")
 
 
+@asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     Defines startup and shutdown logic for the FastAPI application.
