@@ -13,7 +13,6 @@ from requests.exceptions import RequestException, HTTPError, Timeout, Connection
 from langchain_core.messages import HumanMessage, BaseMessage
 from langgraph.graph import START, END, StateGraph, CompiledGraph
 
-
 # Log file path
 LOG_FILE = "graph_client.log"
 
