@@ -1,4 +1,3 @@
-import secrets
 from typing import Annotated, Any, Literal
 
 from pydantic import (
@@ -28,17 +27,6 @@ class Settings(BaseSettings):
     )
     API_V1_STR: str = "/api/v1"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
-
-    BACKEND_CORS_ORIGINS: Annotated[
-        list[AnyUrl] | str, BeforeValidator(parse_cors)
-    ] = []
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def all_cors_origins(self) -> list[str]:
-        return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [
-            self.FRONTEND_HOST
-        ]
 
     PROJECT_NAME: str = "Agentic DB API"
     DESCRIPTION: str = "Application to demonstrate remote graphs"

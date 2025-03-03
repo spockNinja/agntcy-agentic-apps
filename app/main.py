@@ -10,8 +10,14 @@ from fastapi.responses import FileResponse
 from starlette.middleware.cors import CORSMiddleware
 import uvicorn
 
-from app.api.routes import stateless_runs
-from app.core.config import settings
+from api.routes import stateless_runs
+from core.config import settings
+
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -44,7 +50,12 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 
 
 def add_handlers(app: FastAPI):
-    @app.get("/", summary="Root endpoint", description="Returns a welcome message for the API.", tags=["General"])
+    @app.get(
+        "/",
+        summary="Root endpoint",
+        description="Returns a welcome message for the API.",
+        tags=["General"],
+    )
     async def root() -> dict:
         return {"message": "Gateway of the App"}
 
@@ -62,8 +73,7 @@ def add_handlers(app: FastAPI):
         file_name = "favicon.png"
         file_path = os.path.join(app.root_path, "", file_name)
         return FileResponse(
-            path=file_path,
-            media_type="image/png"  # This ensures it's served inline
+            path=file_path, media_type="image/png"  # This ensures it's served inline
         )
 
 
@@ -82,14 +92,14 @@ def create_app():
     app.include_router(stateless_runs.router, prefix=settings.API_V1_STR)
 
     # Set all CORS enabled origins
-    if settings.all_cors_origins:
-        app.add_middleware(
-            CORSMiddleware,
-            allow_origins=settings.all_cors_origins,
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"],
+    )
 
     return app
 
@@ -106,3 +116,7 @@ def main() -> None:
         port=port,
         log_level="info",
     )
+
+
+if __name__ == "__main__":
+    main()
