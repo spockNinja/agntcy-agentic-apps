@@ -1,15 +1,46 @@
 import logging
 import logging.config
 import os
+import json
+import traceback
 from pathlib import Path
 from typing import Dict
 
 
+class JSONFormatter(logging.Formatter):
+    """
+    Custom logging formatter that outputs logs in structured JSON format.
+
+    - Includes timestamp, log level, message, module, function, and line number.
+    - Captures exceptions with stack trace when applicable.
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        log_data = {
+            "timestamp": self.formatTime(record),  # Corrected: Uses default ISO 8601 format
+            "level": record.levelname,
+            "message": record.getMessage(),
+            "module": record.module,
+            "function": record.funcName,
+            "line": record.lineno,
+            "logger": record.name,
+            "pid": record.process,
+        }
+
+        # Capture exception details if they exist
+        if record.exc_info:
+            log_data["error"] = {
+                "type": str(record.exc_info[0]),
+                "message": str(record.exc_info[1]),
+                "stack_trace": traceback.format_exc(),
+            }
+
+        return json.dumps(log_data)
+
+
 def get_log_dir() -> Path:
     """
-    Returns the log directory path.
-
-    Ensures the directory exists before returning it.
+    Returns the log directory path and ensures it exists.
 
     Returns:
         Path: The path to the logs directory (app/logs/)
@@ -21,16 +52,14 @@ def get_log_dir() -> Path:
 
 def get_log_file() -> Path:
     """
-    Returns the log file path.
-
-    Ensures that the file is removed on every startup to keep logs fresh.
+    Returns the log file path and ensures it is removed on every startup.
 
     Returns:
         Path: The path to the log file (app/logs/remote_graphs.log)
     """
     log_file = get_log_dir() / "remote_graphs.log"
 
-    # Remove the existing log file on startup
+    # Remove old log file on startup to ensure fresh logs
     if log_file.exists():
         log_file.unlink()
 
@@ -51,7 +80,7 @@ def get_log_level() -> str:
 
 def get_logging_config(log_file: Path, log_level: str) -> Dict:
     """
-    Generates the logging configuration dictionary.
+    Generates the logging configuration dictionary with JSON formatting.
 
     Args:
         log_file (Path): Path to the log file.
@@ -64,42 +93,27 @@ def get_logging_config(log_file: Path, log_level: str) -> Dict:
         "version": 1,
         "disable_existing_loggers": False,
         "formatters": {
-            "standard": {
-                "format": "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
-            },
-            "detailed": {
-                "format": "%(asctime)s - %(levelname)s - %(name)s [%(filename)s:%(lineno)d] - %(message)s"
+            "json": {
+                "()": JSONFormatter,  # Use custom JSON formatter
             },
         },
         "handlers": {
             "console": {
                 "level": log_level,
                 "class": "logging.StreamHandler",
-                "formatter": "standard",
+                "formatter": "json",
             },
             "file": {
                 "level": log_level,
                 "class": "logging.FileHandler",
                 "filename": str(log_file),
-                "formatter": "detailed",
+                "formatter": "json",
             },
         },
         "loggers": {
-            "uvicorn": {
-                "handlers": ["console", "file"],
-                "level": log_level,
-                "propagate": False,
-            },
-            "fastapi": {
-                "handlers": ["console", "file"],
-                "level": log_level,
-                "propagate": False,
-            },
-            "app": {
-                "handlers": ["console", "file"],
-                "level": log_level,
-                "propagate": False,
-            },
+            "uvicorn": {"handlers": ["console", "file"], "level": log_level, "propagate": False},
+            "fastapi": {"handlers": ["console", "file"], "level": log_level, "propagate": False},
+            "app": {"handlers": ["console", "file"], "level": log_level, "propagate": False},
             "remote_graphs": {  # Keep for compatibility
                 "handlers": ["console", "file"],
                 "level": log_level,
@@ -112,11 +126,11 @@ def get_logging_config(log_file: Path, log_level: str) -> Dict:
 
 def configure_logging() -> None:
     """
-    Configures logging for the FastAPI application.
+    Configures structured JSON logging for the FastAPI application.
 
     - Initializes logging configuration.
     - Removes old log files to ensure clean logs on every restart.
-    - Applies logging settings globally.
+    - Applies JSON formatting globally.
     """
     log_file = get_log_file()
     log_level = get_log_level()
