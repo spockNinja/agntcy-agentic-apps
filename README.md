@@ -24,16 +24,9 @@ This repository contains a Agent Protocol FastAPI application. It also includes 
    pip install -r requirements.txt
    ```
 
-## Environment Variables
-
-The application uses a `.env` file for storing environment variables.
-
-```bash
-OPENAI_API_KEY=sk-<your key>
-OPENAI_MODEL_NAME=gpt-4o
-```
-
 ## Running the Application
+
+### Server
 
 You can run the application by executing:
 
@@ -55,11 +48,6 @@ INFO:     Waiting for application startup.
 {"timestamp": "2025-03-03 12:18:40,192", "level": "INFO", "message": "Starting Remote Graphs App...", "module": "main", "function": "lifespan", "line": 67, "logger": "root", "pid": 25372}
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8123 (Press CTRL+C to quit)
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-{"timestamp": "2025-03-03 12:18:52,935", "level": "INFO", "message": "Application shutdown", "module": "main", "function": "lifespan", "line": 74, "logger": "root", "pid": 25372}
-INFO:     Application shutdown complete.
-INFO:     Finished server process [25372]
 ```
 
 This output confirms that:
@@ -67,6 +55,20 @@ This output confirms that:
 1. Logging is properly initialized.
 2. The server is listening on `0.0.0.0:8123`.
 3. Your environment variables (like `.env file loaded`) are read.
+
+### Client
+
+Change to `client` folder
+
+```bash
+python rest.py
+```
+
+On a successful remote graph run you should see logs in your terminal similar to the snippet below:
+
+```bash
+{"timestamp": "2025-03-03 16:17:10,286", "level": "INFO", "message": "{'event': 'final_result', 'result': {'messages': [HumanMessage(content='Write a story about a bunny', additional_kwargs={}, response_metadata={}, id='26ab296b-c144-45a7-ad98-18d6245e7fff'), AIMessage(content='Received remote request', additional_kwargs={}, response_metadata={}, id='f7c1a983-7f71-416c-983b-39363e401f8d')]}}", "module": "rest", "function": "<module>", "line": 208, "logger": "graph_client", "pid": 15708}
+```
 
 ## Logging
 
