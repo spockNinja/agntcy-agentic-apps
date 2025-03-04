@@ -96,6 +96,8 @@ Change to `client` folder
 langgraph dev
 ```
 
+![Langgraph Studio](./docs/imgs/studio.png "Studio")
+
 ## Contributing
 
 1. Fork the repository.
