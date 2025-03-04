@@ -84,10 +84,11 @@ http://0.0.0.0:8123/docs
 
 (Adjust the host and port if you override them via environment variables.)
 
-
 ## Running as a LangGraph Studio
 
 You need to install Rust: <https://www.rust-lang.org/tools/install>
+
+Run the server
 
 Change to `client` folder
 
