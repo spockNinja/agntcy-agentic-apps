@@ -49,8 +49,12 @@ def get_log_file() -> Path:
     log_file = get_log_dir() / "graph_client.log"
 
     # Remove old log file on startup to ensure fresh logs
-    if log_file.exists():
-        log_file.unlink()
+    try:
+        if log_file.exists():
+            log_file.unlink()
+    except PermissionError as e:
+        logging.error(f"{e}: {log_file}")
+        raise
 
     return log_file
 

@@ -3,7 +3,7 @@
 
 import json
 import traceback
-from typing import TypedDict, List, Dict
+from typing import Annotated, TypedDict, List, Dict
 import uuid
 
 from dotenv import find_dotenv, load_dotenv
@@ -12,6 +12,7 @@ from requests.exceptions import RequestException, HTTPError, Timeout, Connection
 
 from langchain_core.messages import HumanMessage, BaseMessage, AIMessage
 from langgraph.graph import START, END, StateGraph
+from langgraph.graph.message import add_messages
 
 from typing import Dict, Any
 from logging_config import configure_logging
@@ -84,11 +85,11 @@ def decode_response(response_data: Dict[str, Any]) -> Dict[str, Any]:
 class GraphState(TypedDict):
     """Represents the state of the graph, containing a list of messages."""
 
-    messages: List[BaseMessage]
+    messages: Annotated[List[BaseMessage], add_messages]
 
 
 # Graph node that makes a stateless request to the Remote Graph Server
-def node_remote_request_stateless(state: GraphState) -> Dict[str, List[BaseMessage]]:
+def node_remote_request_stateless(state: GraphState) -> Dict[str, Any]:
     """
     Sends a stateless request to the Remote Graph Server.
 
@@ -104,6 +105,7 @@ def node_remote_request_stateless(state: GraphState) -> Dict[str, List[BaseMessa
 
     # Extract the latest user query
     query = state["messages"][-1].content
+    # query = state["messages"][-1].content
     logger.info(json.dumps({"event": "sending_request", "query": query}))
 
     # Request headers
@@ -203,4 +205,4 @@ if __name__ == "__main__":
     inputs = {"messages": [HumanMessage(content="Write a story about a cat")]}
     logger.info({"event": "invoking_graph", "inputs": inputs})
     result = graph.invoke(inputs)
-    logger.info({"event": "final_result", "result": result})    
+    logger.info({"event": "final_result", "result": result})
