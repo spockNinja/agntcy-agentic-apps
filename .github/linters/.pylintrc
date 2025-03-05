@@ -5,5 +5,6 @@
 ignore = remote_agent_ap/app/models/models.py, remote_agent_agp/app/models/models.py
 
 
-[MESSAGES CONTROL]
-disable = C0301
+[FORMAT]
+# Option A: Raise the max line length so you don't get warnings
+max-line-length = 9999
