@@ -1,0 +1,12 @@
+
+[tool.black]
+# Example: keep line length, string normalization, etc.
+line-length = 9999
+skip-string-normalization = true
+
+# AP generated files from LC. We have no control over them
+extend-exclude = '''
+(
+    remote_agent_ap/app/models/models\.py
+    remote_agent_agp/app/models/models\.py
+)
