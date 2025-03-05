@@ -1,16 +1,13 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025 Cisco and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Annotated, Any, Literal
+from typing import Any, Literal
 
 from pydantic import (
-    AnyUrl,
-    BeforeValidator,
     computed_field,
     model_validator,
 )
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing_extensions import Self
+from pydantic_settings import BaseSettings
 
 
 def parse_cors(v: Any) -> list[str] | str:
