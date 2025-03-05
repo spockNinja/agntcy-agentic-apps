@@ -2,11 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from typing import Any, Literal
-
-from pydantic import (
-    computed_field,
-    model_validator,
-)
 from pydantic_settings import BaseSettings
 
 
