@@ -14,7 +14,7 @@ This repository contains a Agent Protocol FastAPI application. It also includes 
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/brisacoder/remote_graphs/
+   git clone https://github.com/agntcy/agentic-apps
    cd your-repo
    ```
 
