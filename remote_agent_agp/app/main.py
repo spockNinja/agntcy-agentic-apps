@@ -4,14 +4,18 @@
 from __future__ import annotations
 import asyncio
 import json
-import signal
 import agp_bindings
+from agp_bindings import GatewayConfig
 import logging
 import os
 
 # move this to a common place
 from core.logging_config import configure_logging
 from dotenv import find_dotenv, load_dotenv
+
+
+# Define logger at the module level
+logger = logging.getLogger("app")
 
 gateway = agp_bindings.Gateway()
 
@@ -128,20 +132,14 @@ def message_parsing(payload) -> str:
     return msg
 
 
-def shutdown(loop):
+async def connect_to_gateway(address) -> tuple[str, str]:
     """
-    Signal handler to cancel all tasks and stop the loop.
-    """
+    Connects to the remote gateway, subscribes to messages, and processes them.
 
-    print("Received shutdown signal")
-    for task in asyncio.all_tasks(loop):
-        task.cancel()
-
-
-async def connect_to_gateway(address) -> str:
-    """
-    Connection to the remote gateway
-    Set states for forwarding and waits for incoming messages
+    Returns:
+        A tuple containing:
+        - The source agent (str) that sent the last received message.
+        - The last decoded message (dict).
     """
 
     # An agent app is identified by a name in the format
@@ -154,25 +152,47 @@ async def connect_to_gateway(address) -> str:
     namespace = "default"
     local_agent = "server"
 
+    # Define the service based on the local agent
+    gateway = agp_bindings.Gateway()
+
+    # Configure gateway
+    config = GatewayConfig(endpoint=address, insecure=True)
+    gateway.configure(config)
+
     # Connect to the gateway server
     local_agent_id = await gateway.create_agent(organization, namespace, local_agent)
 
-    # Connect to the service and subscribe for the local name
-    # to receive content
-    _ = await gateway.connect(address, insecure=True)
-    await gateway.subscribe(organization, namespace, local_agent, local_agent_id)
+    # Connect to the service and subscribe for messages
 
     try:
+        _ = await gateway.connect()
+    except Exception as e:
+        raise ValueError(f"{e}")
+    await gateway.subscribe(organization, namespace, local_agent, local_agent_id)
+
+    last_src = ""
+    last_msg = ""
+
+    try:
+        logger.info(f"AGP client started for agent: {organization}/{namespace}/{local_agent}")
         while True:
             src, recv = await gateway.receive()
-
             payload = json.loads(recv.decode("utf8"))
             msg = message_parsing(payload)
 
-            # publish reply message to src agent
+            logger.info(f"Received message{msg}, from agent {src}")
+
+            # Publish reply message to src agent
             await gateway.publish_to(msg.encode(), src)
+
+            # Store the last received source and message
+            last_src = src
+            last_msg = msg
     except asyncio.CancelledError:
         print("Shutdown server")
+    finally:
+        print(f"Shutting down agent {organization}/{namespace}/{local_agent}")
+        return last_src, last_msg  # Return last received source and message
 
 
 def main() -> None:
@@ -188,28 +208,22 @@ def main() -> None:
     Returns:
         None
     """
-    configure_logging()  # Apply global logging settings
-
-    logger = logging.getLogger("app")  # Default logger for main script
+    configure_logging()
     logger.info("Starting AGP application...")
 
-    # Load environment variables before starting the application
     load_environment_variables()
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    # Register the signal handler for graceful shutdown
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(sig, shutdown, loop)
+    port = os.getenv("PORT", "46357")
+    address = os.getenv("AGP_ADDRESS", "http://127.0.0.1")
+
     try:
-        # Determine gateway address from environment variables or use the default
-        port = os.getenv("PORT", "46357")
-        address = os.getenv("AGP_ADDRESS", "http://127.0.0.1")
-        loop.run_until_complete(connect_to_gateway(address + ":" + port))
-    except asyncio.CancelledError:
-        print("Main task cancelled")
-    finally:
-        loop.close()
+        src, msg = asyncio.run(connect_to_gateway(f"{address}:{port}"))
+        print(f"Last message received from: {src}")
+        print(f"Last message content: {msg}")
+    except KeyboardInterrupt:
+        print("Application interrupted")
+    except Exception as e:
+        print(f"Unhandled error: {e}")
 
 
 if __name__ == "__main__":

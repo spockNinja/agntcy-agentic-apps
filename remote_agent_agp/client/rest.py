@@ -4,12 +4,14 @@
 # Description: This file contains a sample graph client that makes a stateless request to the Remote Graph Server.
 # Usage: python3 client/rest.py
 
+
+import os
 import json
 import uuid
 from typing import Annotated, Any, Dict, List, TypedDict
 import asyncio
 import agp_bindings
-import os
+from agp_bindings import GatewayConfig
 
 from dotenv import find_dotenv, load_dotenv
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
@@ -19,7 +21,9 @@ from logging_config import configure_logging
 
 logger = configure_logging()
 
-gateway = agp_bindings.Gateway()
+
+class GatewayHolder:
+    gateway = None
 
 
 def load_environment_variables(env_file: str | None = None) -> None:
@@ -91,14 +95,19 @@ async def send_and_recv(msg) -> Dict[str, Any]:
     Send a message to the remote endpoint and
     waits for the reply
     """
-    await gateway.publish(msg.encode(), "cisco", "default", "server")
-    _, recv = await gateway.receive()
+
+    gateway = GatewayHolder.gateway
+    if gateway is not None:
+        await gateway.publish(msg.encode(), "cisco", "default", "server")
+        _, recv = await gateway.receive()
+    else:
+        raise RuntimeError("Gateway is not initialized yet!")
 
     response_data = json.loads(recv.decode("utf8"))
 
     # check for errors
     error_code = response_data.get("error")
-    if error_code != None:
+    if error_code is not None:
         error_msg = {
             "error": "AGP request failed",
             "status_code": error_code,
@@ -122,14 +131,7 @@ def node_remote_agp(state: GraphState) -> Dict[str, Any]:
 
     # Extract the latest user query
     query = state["messages"][-1].content
-    # query = state["messages"][-1].content
     logger.info(json.dumps({"event": "sending_request", "query": query}))
-
-    # Request headers
-    headers = {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-    }
 
     # payload to send to autogen server at /runs endpoint
     payload = {
@@ -158,16 +160,27 @@ async def connect_to_gateway(address):
     local_agent = "client"
     remote_agent = "server"
 
+    # Define the service based on the local agent
+    gateway = agp_bindings.Gateway()
+
+    # Configure gateway
+    config = GatewayConfig(endpoint=address, insecure=True)
+    gateway.configure(config)
+
     # Connect to the gateway server
     local_agent_id = await gateway.create_agent(organization, namespace, local_agent)
 
     # Connect to the service and subscribe for the local name
     # to receive content
-    _ = await gateway.connect(address, insecure=True)
+    try:
+        _ = await gateway.connect()
+    except Exception as e:
+        raise ValueError(f"{e}")
     await gateway.subscribe(organization, namespace, local_agent, local_agent_id)
 
     # set the state to connect to the remote agent
     await gateway.set_route(organization, namespace, remote_agent)
+    return gateway
 
 
 # Build the state graph
@@ -180,7 +193,6 @@ def build_graph() -> Any:
     """
     builder = StateGraph(GraphState)
     builder.add_node("node_remote_request_stateless", node_remote_agp)
-    # builder.add_node("node_remote_request_stateless", node_remote_request_stateless)
     builder.add_edge(START, "node_remote_request_stateless")
     builder.add_edge("node_remote_request_stateless", END)
     return builder.compile()
@@ -193,7 +205,8 @@ if __name__ == "__main__":
     # Determine gateway address from environment variables or use the default
     port = os.getenv("PORT", "46357")
     address = os.getenv("AGP_ADDRESS", "http://127.0.0.1")
-    asyncio.run(connect_to_gateway(address + ":" + port))
+    # TBD: Part of graph config
+    GatewayHolder.gateway = asyncio.run(connect_to_gateway(address + ":" + port))
     inputs = {"messages": [HumanMessage(content="Write a story about a cat")]}
     logger.info({"event": "invoking_graph", "inputs": inputs})
     result = graph.invoke(inputs)
