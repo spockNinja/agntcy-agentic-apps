@@ -2,21 +2,18 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from __future__ import annotations
-
+import asyncio
+import json
+import signal
+import agp_bindings
 import logging
 import os
-from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
-import uvicorn
-from api.routes import stateless_runs
-from core.config import settings
+# move this to a common place
 from core.logging_config import configure_logging
 from dotenv import find_dotenv, load_dotenv
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
-from fastapi.routing import APIRoute
-from starlette.middleware.cors import CORSMiddleware
+
+gateway = agp_bindings.Gateway()
 
 
 def load_environment_variables(env_file: str | None = None) -> None:
@@ -47,154 +44,146 @@ def load_environment_variables(env_file: str | None = None) -> None:
         logging.warning("No .env file found. Ensure environment variables are set.")
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+def create_error(error, code) -> str:
     """
-    Defines startup and shutdown logic for the FastAPI application.
-
-    This function follows the `lifespan` approach, allowing resource initialization
-    before the server starts and cleanup after it shuts down.
-
-    Args:
-        app (FastAPI): The FastAPI application instance.
-
-    Yields:
-        None: The application runs while `yield` is active.
-
-    Behavior:
-    - On startup: Logs a startup message.
-    - On shutdown: Logs a shutdown message.
-    - Can be extended to initialize resources (e.g., database connections).
+    Creates a reply message with an error code
     """
-    logging.info("Starting Remote Graphs App...")
-
-    # Example: Attach database connection to app state (if needed)
-    # app.state.db = await init_db_connection()
-
-    yield  # Application runs while 'yield' is in effect.
-
-    logging.info("Application shutdown")
-
-    # Example: Close database connection (if needed)
-    # await app.state.db.close()
+    payload = {
+        "message": error,
+        "error": code,
+    }
+    msg = json.dumps(payload)
+    return msg
 
 
-def custom_generate_unique_id(route: APIRoute) -> str:
+def message_parsing(payload) -> str:
     """
-    Generates a unique identifier for API routes.
-
-    Args:
-        route (APIRoute): The FastAPI route object.
-
-    Returns:
-        str: A unique string identifier for the route.
-
-    Behavior:
-    - If the route has tags, the ID is formatted as `{tag}-{route_name}`.
-    - If no tags exist, the route name is used as the ID.
+    Parse the message and looks for errors
+    Replies to the incoming message if no error is detected
     """
-    if route.tags:
-        return f"{route.tags[0]}-{route.name}"
-    return route.name
+    logging.debug("Decoded payload: %s", payload)
 
+    # Extract assistant_id from the payload
+    agent_id = payload.get("agent_id")
+    logging.debug(f"Agent id: {agent_id}")
 
-def add_handlers(app: FastAPI) -> None:
-    """
-    Adds global route handlers to the FastAPI application.
+    # Validate that the assistant_id is not empty.
+    if not payload.get("agent_id"):
+        return create_error("agent_id is required and cannot be empty.", 422)
 
-    This function registers common endpoints, such as the root message
-    and the favicon.
+    # Extract the route from the message payload.
+    # This step is done to emulate the behavior of the REST API.
+    route = payload.get("route")
+    if not payload.get("route") or route != "/runs":
+        return create_error("Not Found.", 404)
 
-    Args:
-        app (FastAPI): The FastAPI application instance.
+    # Validate the config section: ensure that config.tags is a non-empty list.
+    if (metadata := payload.get("metadata", None)) is not None:
+        message_id = metadata.get("id")
 
-    Returns:
-        None
-    """
+    # -----------------------------------------------
+    # Extract the human input content from the payload.
+    # We expect the content to be located at: payload["input"]["messages"][0]["content"]
+    # -----------------------------------------------
 
-    @app.get(
-        "/",
-        summary="Root endpoint",
-        description="Returns a welcome message for the API.",
-        tags=["General"],
-    )
-    async def root() -> dict:
-        """
-        Root endpoint that provides a welcome message.
+    # Retrieve the 'input' field and ensure it is a dictionary.
+    input_field = payload.get("input")
+    if not isinstance(input_field, dict):
+        return create_error("The 'input' field should be a dictionary.", 500)
 
-        Returns:
-            dict: A JSON response with a greeting message.
-        """
-        return {"message": "Gateway of the App"}
-
-    @app.get("/favicon.png", include_in_schema=False)
-    async def favicon() -> FileResponse:
-        """
-        Serves the favicon as a PNG file.
-
-        This prevents the browser from repeatedly requesting a missing
-        favicon when accessing the API.
-
-        Returns:
-            FileResponse: A response serving the `favicon.png` file.
-
-        Raises:
-            FileNotFoundError: If the favicon file is missing.
-        """
-        file_name = "favicon.png"
-        file_path = os.path.join(app.root_path, "", file_name)
-        return FileResponse(
-            path=file_path, media_type="image/png"  # Ensures it's served inline
+    # Retrieve the 'messages' list from the 'input' dictionary.
+    messages = input_field.get("messages")
+    if not isinstance(messages, list) or not messages:
+        return create_error(
+            "The 'input.messages' field should be a non-empty list.", 500
         )
 
+    # Access the first message in the list.
+    first_message = messages[0]
+    if not isinstance(first_message, dict):
+        return create_error(
+            "The first element in 'input.messages' should be a dictionary.", 500
+        )
 
-def create_app() -> FastAPI:
+    # Extract the 'content' from the first message.
+    human_input_content = first_message.get("content")
+    if human_input_content is None:
+        return create_error(
+            "Missing 'content' in the first message of 'input.messages'.", 500
+        )
+
+    messages = {
+        "messages": [{"role": "assistant", "content": "Received remote request"}]
+    }
+
+    # payload to add to the reply
+    payload = {
+        "agent_id": agent_id,
+        "output": messages,
+        "model": "gpt-4o",
+        "metadata": {"id": message_id},
+    }
+
+    msg = json.dumps(payload)
+    return msg
+
+
+def shutdown(loop):
     """
-    Creates and configures the FastAPI application instance.
-
-    This function sets up:
-    - The API metadata (title, version, OpenAPI URL).
-    - CORS middleware to allow cross-origin requests.
-    - Route handlers for API endpoints.
-    - A custom unique ID generator for API routes.
-
-    Returns:
-        FastAPI: The configured FastAPI application instance.
+    Signal handler to cancel all tasks and stop the loop.
     """
-    app = FastAPI(
-        title=settings.PROJECT_NAME,
-        openapi_url=f"{settings.API_V1_STR}/openapi.json",
-        generate_unique_id_function=custom_generate_unique_id,
-        version="0.1.0",
-        description=settings.PROJECT_NAME,
-        lifespan=lifespan,  # Use the new lifespan approach for startup/shutdown
-    )
 
-    add_handlers(app)
-    app.include_router(stateless_runs.router, prefix=settings.API_V1_STR)
+    print("Received shutdown signal")
+    for task in asyncio.all_tasks(loop):
+        task.cancel()
 
-    # Set all CORS enabled origins
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["*"],
-    )
 
-    return app
+async def connect_to_gateway(address) -> str:
+    """
+    Connection to the remote gateway
+    Set states for forwarding and waits for incoming messages
+    """
+
+    # An agent app is identified by a name in the format
+    # /organization/namespace/agent_class/agent_id. The agent_class indicates the
+    # type of agent, and there can be multiple instances of the same type running
+    # (e.g., horizontal scaling of the same app in Kubernetes). The agent_id
+    # identifies a specific instance of the agent and it is returned by the
+    # create_agent function is not provided
+    organization = "cisco"
+    namespace = "default"
+    local_agent = "server"
+
+    # Connect to the gateway server
+    local_agent_id = await gateway.create_agent(organization, namespace, local_agent)
+
+    # Connect to the service and subscribe for the local name
+    # to receive content
+    _ = await gateway.connect(address, insecure=True)
+    await gateway.subscribe(organization, namespace, local_agent, local_agent_id)
+
+    try:
+        while True:
+            src, recv = await gateway.receive()
+
+            payload = json.loads(recv.decode("utf8"))
+            msg = message_parsing(payload)
+
+            # publish reply message to src agent
+            await gateway.publish_to(msg.encode(), src)
+    except asyncio.CancelledError:
+        print("Shutdown server")
 
 
 def main() -> None:
     """
-    Entry point for running the FastAPI application.
+    Entry point for running the application.
 
     This function performs the following:
     - Configures logging globally.
     - Loads environment variables from a `.env` file.
-    - Retrieves the port from environment variables (default: 8123).
-    - Starts the Uvicorn server.
+    - Retrieves the address for the remote gateway
+    - Connects to the gateway and waits for incoming messages
 
     Returns:
         None
@@ -202,21 +191,25 @@ def main() -> None:
     configure_logging()  # Apply global logging settings
 
     logger = logging.getLogger("app")  # Default logger for main script
-    logger.info("Starting FastAPI application...")
+    logger.info("Starting AGP application...")
 
     # Load environment variables before starting the application
     load_environment_variables()
 
-    # Determine port number from environment variables or use the default
-    port = int(os.getenv("PORT", "8123"))
-
-    # Start the FastAPI application using Uvicorn
-    uvicorn.run(
-        create_app(),
-        host="0.0.0.0",
-        port=port,
-        log_level="info",
-    )
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    # Register the signal handler for graceful shutdown
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, shutdown, loop)
+    try:
+        # Determine gateway address from environment variables or use the default
+        port = os.getenv("PORT", "46357")
+        address = os.getenv("AGP_ADDRESS", "http://127.0.0.1")
+        loop.run_until_complete(connect_to_gateway(address + ":" + port))
+    except asyncio.CancelledError:
+        print("Main task cancelled")
+    finally:
+        loop.close()
 
 
 if __name__ == "__main__":

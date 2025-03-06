@@ -5,24 +5,21 @@
 # Usage: python3 client/rest.py
 
 import json
-import traceback
 import uuid
 from typing import Annotated, Any, Dict, List, TypedDict
+import asyncio
+import agp_bindings
+import os
 
-import requests
 from dotenv import find_dotenv, load_dotenv
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from logging_config import configure_logging
-from requests.exceptions import ConnectionError as RequestsConnectionError
-from requests.exceptions import HTTPError, RequestException, Timeout
 
-# Initialize logger
 logger = configure_logging()
 
-# URL for the Remote Graph Server /runs endpoint
-REMOTE_SERVER_URL = "http://127.0.0.1:8123/api/v1/runs"
+gateway = agp_bindings.Gateway()
 
 
 def load_environment_variables(env_file: str | None = None) -> None:
@@ -89,17 +86,36 @@ class GraphState(TypedDict):
     messages: Annotated[List[BaseMessage], add_messages]
 
 
-# Graph node that makes a stateless request to the Remote Graph Server
-def node_remote_request_stateless(state: GraphState) -> Dict[str, Any]:
+async def send_and_recv(msg) -> Dict[str, Any]:
     """
-    Sends a stateless request to the Remote Graph Server.
-
-    Args:
-        state (GraphState): The current graph state containing messages.
-
-    Returns:
-        Dict[str, List[BaseMessage]]: Updated state containing server response or error message.
+    Send a message to the remote endpoint and
+    waits for the reply
     """
+    await gateway.publish(msg.encode(), "cisco", "default", "server")
+    _, recv = await gateway.receive()
+
+    response_data = json.loads(recv.decode("utf8"))
+
+    # check for errors
+    error_code = response_data.get("error")
+    if error_code != None:
+        error_msg = {
+            "error": "AGP request failed",
+            "status_code": error_code,
+            "exception": response_data.get("message"),
+        }
+        logger.error(json.dumps(error_msg))
+        return {"messages": [HumanMessage(content=json.dumps(error_msg))]}
+
+    else:
+        # decode message
+        decoded_response = decode_response(response_data)
+        logger.info(decoded_response)
+
+        return {"messages": decoded_response.get("messages", [])}
+
+
+def node_remote_agp(state: GraphState) -> Dict[str, Any]:
     if not state["messages"]:
         logger.error(json.dumps({"error": "GraphState contains no messages"}))
         return {"messages": [HumanMessage(content="Error: No messages in state")]}
@@ -121,67 +137,37 @@ def node_remote_request_stateless(state: GraphState) -> Dict[str, Any]:
         "input": {"messages": [HumanMessage(query).model_dump()]},
         "model": "gpt-4o",
         "metadata": {"id": str(uuid.uuid4())},
+        # Add the route field to emulate the REST API
+        "route": "/runs",
     }
 
-    # Use a session for efficiency
-    session = requests.Session()
+    msg = json.dumps(payload)
+    res = asyncio.run(send_and_recv(msg))
+    return res
 
-    try:
-        response = session.post(
-            REMOTE_SERVER_URL, headers=headers, json=payload, timeout=10
-        )
 
-        # Raise exception for HTTP errors
-        response.raise_for_status()
+async def connect_to_gateway(address):
+    # An agent app is identified by a name in the format
+    # /organization/namespace/agent_class/agent_id. The agent_class indicates the
+    # type of agent, and there can be multiple instances of the same type running
+    # (e.g., horizontal scaling of the same app in Kubernetes). The agent_id
+    # identifies a specific instance of the agent and it is returned by the
+    # create_agent function is not provided
+    organization = "cisco"
+    namespace = "default"
+    local_agent = "client"
+    remote_agent = "server"
 
-        # Parse response as JSON
-        response_data = response.json()
-        # Decode JSON response
-        decoded_response = decode_response(response_data)
+    # Connect to the gateway server
+    local_agent_id = await gateway.create_agent(organization, namespace, local_agent)
 
-        logger.info(decoded_response)
+    # Connect to the service and subscribe for the local name
+    # to receive content
+    _ = await gateway.connect(address, insecure=True)
+    await gateway.subscribe(organization, namespace, local_agent, local_agent_id)
 
-        return {"messages": decoded_response.get("messages", [])}
-
-    except (Timeout, RequestsConnectionError) as conn_err:
-        error_msg = {
-            "error": "Connection timeout or failure",
-            "exception": str(conn_err),
-        }
-        logger.error(json.dumps(error_msg))
-        return {"messages": [HumanMessage(content=json.dumps(error_msg))]}
-
-    except HTTPError as http_err:
-        error_msg = {
-            "error": "HTTP request failed",
-            "status_code": response.status_code,
-            "exception": str(http_err),
-        }
-        logger.error(json.dumps(error_msg))
-        return {"messages": [HumanMessage(content=json.dumps(error_msg))]}
-
-    except RequestException as req_err:
-        error_msg = {"error": "Request failed", "exception": str(req_err)}
-        logger.error(json.dumps(error_msg))
-        return {"messages": [HumanMessage(content=json.dumps(error_msg))]}
-
-    except json.JSONDecodeError as json_err:
-        error_msg = {"error": "Invalid JSON response", "exception": str(json_err)}
-        logger.error(json.dumps(error_msg))
-        return {"messages": [HumanMessage(content=json.dumps(error_msg))]}
-
-    except Exception as e:
-        error_msg = {
-            "error": "Unexpected failure",
-            "exception": str(e),
-            "stack_trace": traceback.format_exc(),
-        }
-        logger.error(json.dumps(error_msg))
-
-    finally:
-        session.close()
-
-    return {"messages": [AIMessage(content=json.dumps(error_msg))]}
+    # set the state to connect to the remote agent
+    await gateway.set_route(organization, namespace, remote_agent)
 
 
 # Build the state graph
@@ -193,7 +179,8 @@ def build_graph() -> Any:
         StateGraph: A compiled LangGraph state graph.
     """
     builder = StateGraph(GraphState)
-    builder.add_node("node_remote_request_stateless", node_remote_request_stateless)
+    builder.add_node("node_remote_request_stateless", node_remote_agp)
+    # builder.add_node("node_remote_request_stateless", node_remote_request_stateless)
     builder.add_edge(START, "node_remote_request_stateless")
     builder.add_edge("node_remote_request_stateless", END)
     return builder.compile()
@@ -201,8 +188,12 @@ def build_graph() -> Any:
 
 # Main execution
 if __name__ == "__main__":
-
     graph = build_graph()
+    load_environment_variables()
+    # Determine gateway address from environment variables or use the default
+    port = os.getenv("PORT", "46357")
+    address = os.getenv("AGP_ADDRESS", "http://127.0.0.1")
+    asyncio.run(connect_to_gateway(address + ":" + port))
     inputs = {"messages": [HumanMessage(content="Write a story about a cat")]}
     logger.info({"event": "invoking_graph", "inputs": inputs})
     result = graph.invoke(inputs)

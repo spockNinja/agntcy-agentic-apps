@@ -116,21 +116,6 @@ def get_logging_config(log_file: Path, log_level: str) -> Dict:
             },
         },
         "loggers": {
-            "uvicorn": {
-                "handlers": ["console", "file"],
-                "level": log_level,
-                "propagate": False,
-            },
-            "fastapi": {
-                "handlers": ["console", "file"],
-                "level": log_level,
-                "propagate": False,
-            },
-            "app": {
-                "handlers": ["console", "file"],
-                "level": log_level,
-                "propagate": False,
-            },
             "remote_agent_agp": {  # Keep for compatibility
                 "handlers": ["console", "file"],
                 "level": log_level,
