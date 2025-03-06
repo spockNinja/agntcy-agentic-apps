@@ -131,7 +131,7 @@ def get_logging_config(log_file: Path, log_level: str) -> Dict:
                 "level": log_level,
                 "propagate": False,
             },
-            "remote_graphs": {  # Keep for compatibility
+            "remote_agent_ap": {  # Keep for compatibility
                 "handlers": ["console", "file"],
                 "level": log_level,
                 "propagate": False,
