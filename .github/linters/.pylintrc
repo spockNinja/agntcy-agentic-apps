@@ -2,6 +2,7 @@
 
 [MASTER]
 # AP generated files from LC. We have no control over them
+ignore = models.py
 ignore-paths = remote_agent_ap/app/models/, remote_agent_agp/app/models/
 
 
