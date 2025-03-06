@@ -11,8 +11,12 @@ import uuid
 from typing import Annotated, TypedDict, List, Dict, Any
 from dotenv import find_dotenv, load_dotenv
 import requests
-from requests.exceptions import RequestException, HTTPError, Timeout, ConnectionError
-
+from requests.exceptions import (
+    RequestException,
+    HTTPError,
+    Timeout,
+    ConnectionError as RequestsConnectionError,
+)
 from langchain_core.messages import HumanMessage, BaseMessage, AIMessage
 from langgraph.graph import START, END, StateGraph
 from langgraph.graph.message import add_messages
@@ -144,7 +148,7 @@ def node_remote_request_stateless(state: GraphState) -> Dict[str, Any]:
 
         return {"messages": decoded_response.get("messages", [])}
 
-    except (Timeout, ConnectionError) as conn_err:
+    except (Timeout, RequestsConnectionError) as conn_err:
         error_msg = {
             "error": "Connection timeout or failure",
             "exception": str(conn_err),
