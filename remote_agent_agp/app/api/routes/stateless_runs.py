@@ -47,7 +47,8 @@ def run_stateless_runs_post(body: RunCreateStateless) -> Union[Any, ErrorRespons
                 detail=msg,
             )
 
-        # Validate the config section: ensure that config.tags is a non-empty list.
+        message_id = ""
+        # Validate the message section
         if (metadata := payload.get("metadata", None)) is not None:
             message_id = metadata.get("id")
 
