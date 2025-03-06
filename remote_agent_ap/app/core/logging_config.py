@@ -1,10 +1,10 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025 Cisco and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 
+import json
 import logging
 import logging.config
 import os
-import json
 import traceback
 from pathlib import Path
 from typing import Dict
