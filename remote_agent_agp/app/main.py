@@ -2,17 +2,16 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from __future__ import annotations
+
 import asyncio
 import json
-import agp_bindings
-from agp_bindings import GatewayConfig
 import logging
 import os
 
-# move this to a common place
+import agp_bindings
+from agp_bindings import GatewayConfig
 from core.logging_config import configure_logging
 from dotenv import find_dotenv, load_dotenv
-
 
 # Define logger at the module level
 logger = logging.getLogger("app")
@@ -174,7 +173,9 @@ async def connect_to_gateway(address) -> tuple[str, str]:
     last_msg = ""
 
     try:
-        logger.info(f"AGP client started for agent: {organization}/{namespace}/{local_agent}")
+        logger.info(
+            f"AGP client started for agent: {organization}/{namespace}/{local_agent}"
+        )
         while True:
             src, recv = await gateway.receive()
             payload = json.loads(recv.decode("utf8"))

@@ -4,17 +4,16 @@
 # Description: This file contains a sample graph client that makes a stateless request to the Remote Graph Server.
 # Usage: python3 client/rest.py
 
-
-import os
+import asyncio
 import json
+import os
 import uuid
 from typing import Annotated, Any, Dict, List, TypedDict
-import asyncio
+
 import agp_bindings
 from agp_bindings import GatewayConfig
-
 from dotenv import find_dotenv, load_dotenv
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.messages import BaseMessage, HumanMessage
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from logging_config import configure_logging
