@@ -15,7 +15,7 @@ This repository contains a Agent Gateway Protocol application.
 
    ```bash
    git clone https://github.com/agntcy/agentic-apps
-   cd your-repo
+   cd your-repo/remote_agent_agp
    ```
 
 2. Install the dependencies:
@@ -46,8 +46,8 @@ You can run the server app by executing from /agentic-apps/remote_agent_agp/app:
 
 ### Client
 
-You can run the client app by executing from agentic-apps/remote_agent_agp/client:
+You can run the client app by executing from `agentic-apps/remote_agent_agp/client`:
 
    ```bash
-   python rest.py
+   python agp.py
    ```
