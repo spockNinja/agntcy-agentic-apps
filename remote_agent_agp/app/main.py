@@ -116,7 +116,7 @@ def message_parsing(payload) -> str:
         )
 
     messages = {
-        "messages": [{"role": "assistant", "content": "Received remote request"}]
+        "messages": [{"role": "assistant", "content": "cats are wise"}]
     }
 
     # payload to add to the reply
