@@ -1,8 +1,14 @@
 # Remote Agents with AGP
 
-## Overview
+This repository demonstrates an agentic application that uses a remote agent with Agent Gateway Protocol. It has the following simple topology:
 
-This repository contains a Agent Gateway Protocol application.
+```bash
+client <-----> Gateway <----> Server
+```
+
+- Client contains a Langgraph application
+- Server is a FastAPI application that contains the remote agent
+- Gateway is a message broker.
 
 ## Requirements
 
