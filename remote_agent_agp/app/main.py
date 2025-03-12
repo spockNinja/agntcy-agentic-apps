@@ -116,7 +116,7 @@ def message_parsing(payload) -> str:
         )
 
     messages = {
-        "messages": [{"role": "assistant", "content": "Received remote request"}]
+        "messages": [{"role": "assistant", "content": "cats are wise"}]
     }
 
     # payload to add to the reply
@@ -219,12 +219,12 @@ def main() -> None:
 
     try:
         src, msg = asyncio.run(connect_to_gateway(f"{address}:{port}"))
-        print(f"Last message received from: {src}")
-        print(f"Last message content: {msg}")
+        logger.info(f"Last message received from: {src}")
+        logger.info(f"Last message content: {msg}")
     except KeyboardInterrupt:
-        print("Application interrupted")
+        logger.info("Application interrupted")
     except Exception as e:
-        print(f"Unhandled error: {e}")
+        logger.info(f"Unhandled error: {e}")
 
 
 if __name__ == "__main__":

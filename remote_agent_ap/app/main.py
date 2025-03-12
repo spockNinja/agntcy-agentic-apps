@@ -19,6 +19,10 @@ from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
 
+# Define logger at the module level
+logger = logging.getLogger("app")
+
+
 def load_environment_variables(env_file: str | None = None) -> None:
     """
     Load environment variables from a .env file safely.
@@ -42,9 +46,9 @@ def load_environment_variables(env_file: str | None = None) -> None:
 
     if env_path:
         load_dotenv(env_path, override=True)
-        logging.info(f".env file loaded from {env_path}")
+        logger.info(f".env file loaded from {env_path}")
     else:
-        logging.warning("No .env file found. Ensure environment variables are set.")
+        logger.warning("No .env file found. Ensure environment variables are set.")
 
 
 @asynccontextmanager
@@ -66,14 +70,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     - On shutdown: Logs a shutdown message.
     - Can be extended to initialize resources (e.g., database connections).
     """
-    logging.info("Starting Remote Graphs App...")
+    logger.info("Starting Remote Graphs App...")
 
     # Example: Attach database connection to app state (if needed)
     # app.state.db = await init_db_connection()
 
     yield  # Application runs while 'yield' is in effect.
 
-    logging.info("Application shutdown")
+    logger.info("Application shutdown")
 
     # Example: Close database connection (if needed)
     # await app.state.db.close()
@@ -201,7 +205,6 @@ def main() -> None:
     """
     configure_logging()  # Apply global logging settings
 
-    logger = logging.getLogger("app")  # Default logger for main script
     logger.info("Starting FastAPI application...")
 
     # Load environment variables before starting the application
