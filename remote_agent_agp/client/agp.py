@@ -14,6 +14,7 @@ import agp_bindings
 from agp_bindings import GatewayConfig
 from dotenv import find_dotenv, load_dotenv
 from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.messages.utils import convert_to_openai_messages
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from logging_config import configure_logging
@@ -132,10 +133,12 @@ def node_remote_agp(state: GraphState) -> Dict[str, Any]:
     query = state["messages"][-1].content
     logger.info(json.dumps({"event": "sending_request", "query": query}))
 
+    messages = convert_to_openai_messages(state["messages"])
+
     # payload to send to autogen server at /runs endpoint
     payload = {
         "agent_id": "remote_agent",
-        "input": {"messages": [HumanMessage(query).model_dump()]},
+        "input": {"messages": messages},
         "model": "gpt-4o",
         "metadata": {"id": str(uuid.uuid4())},
         # Add the route field to emulate the REST API
@@ -199,8 +202,8 @@ def build_graph() -> Any:
 
 # Main execution
 if __name__ == "__main__":
-    graph = build_graph()
     load_environment_variables()
+    graph = build_graph()
     # Determine gateway address from environment variables or use the default
     port = os.getenv("PORT", "46357")
     address = os.getenv("AGP_ADDRESS", "http://127.0.0.1")

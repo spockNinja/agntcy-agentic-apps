@@ -53,7 +53,7 @@ docker pull ghcr.io/agntcy/agp/gw:latest
 ```bash
 docker run -it `
     -e PASSWORD=$env:PASSWORD `
-    -v ${PWD}/config/base/server-config.yaml:/config.yaml `
+    -v ${PWD}/gw/config/base/server-config.yaml:/config.yaml `
     -p 46357:46357 `
     ghcr.io/agntcy/agp/gw:0.3.3 /gateway --config /config.yaml
 ```
