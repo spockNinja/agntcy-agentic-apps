@@ -7,6 +7,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 
 import agp_bindings
 from agp_bindings import GatewayConfig
@@ -199,6 +200,22 @@ async def connect_to_gateway(address) -> tuple[str, str]:
         return last_src, last_msg  # Return last received source and message
 
 
+async def try_connect_to_gateway(address, port, max_duration=300, initial_delay=1):
+    start_time = time.time()
+    delay = initial_delay
+
+    while time.time() - start_time < max_duration:
+        try:
+            src, msg = await connect_to_gateway(f"{address}:{port}")
+            return src, msg
+        except Exception as e:
+            logger.warning(f"Connection attempt failed: {e}. Retrying in {delay} seconds...")
+            await asyncio.sleep(delay)
+            delay = min(delay * 2, 30)  # Exponential backoff, max delay capped at 30 sec
+
+    raise TimeoutError("Failed to connect within the allowed time frame")
+
+
 def main() -> None:
     """
     Entry point for running the application.
@@ -221,7 +238,7 @@ def main() -> None:
     address = os.getenv("AGP_ADDRESS", "http://127.0.0.1")
 
     try:
-        src, msg = asyncio.run(connect_to_gateway(f"{address}:{port}"))
+        src, msg = asyncio.run(try_connect_to_gateway(address, port))
         logger.info(f"Last message received from: {src}")
         logger.info(f"Last message content: {msg}")
     except KeyboardInterrupt:

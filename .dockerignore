@@ -1,0 +1,7 @@
+remote_agent_docker/
+remote_agent_ap
+windows_dist/
+__pycache__/
+*.pyc
+*.pyo
+.env
