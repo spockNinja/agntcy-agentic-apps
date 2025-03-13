@@ -187,25 +187,26 @@ async def connect_to_gateway(address):
 
 
 # Build the state graph
-def build_graph() -> Any:
+async def build_graph() -> Any:
     """
     Constructs the state graph for handling requests.
 
     Returns:
         StateGraph: A compiled LangGraph state graph.
     """
+    await init_gateway_conn()
     builder = StateGraph(GraphState)
-    builder.add_node("node_remote_request_stateless", node_remote_agp)
-    builder.add_edge(START, "node_remote_request_stateless")
-    builder.add_edge("node_remote_request_stateless", END)
+    builder.add_node("node_remote_agp", node_remote_agp)
+    builder.add_edge(START, "node_remote_agp")
+    builder.add_edge("node_remote_agp", END)
     return builder.compile()
 
 
-def init_gateway_conn():
+async def init_gateway_conn():
     port = os.getenv("PORT", "46357")
     address = os.getenv("AGP_ADDRESS", "http://127.0.0.1")
     # TBD: Part of graph config
-    GatewayHolder.gateway = asyncio.run(connect_to_gateway(address + ":" + port))
+    GatewayHolder.gateway = await connect_to_gateway(address + ":" + port)
 
 
 def main():
