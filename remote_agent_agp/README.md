@@ -14,6 +14,7 @@ client <-----> Gateway <----> Server
 
 - Python 3.12+
 - A virtual environment is recommended for isolating dependencies.
+- a `.env` at the proejct root with your OpenAI API key
 
 ## Installation
 
@@ -24,11 +25,28 @@ client <-----> Gateway <----> Server
    cd your-repo/remote_agent_agp
    ```
 
-2. Install the dependencies:
+### Docker Remote Agent
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+There are convenience scripts for building Docker images for both Windows and Linux. Instructions below are for windows and Linux is almost identical.
+
+On Windows Make sure you can execute PS scripts:
+
+```Powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+```Powershell
+cd remote_agent_agp\remote_agent_docker
+.\build_image.ps1
+```
+
+After everything is done, you should have a similar output. The image is large because there is still much debugging happening.
+
+```Powershell
+> docker images    
+REPOSITORY              TAG       IMAGE ID       CREATED              SIZE
+agp_remote_agent        latest    054fbed666f9   About a minute ago   4.32GB
+```
 
 ## Running the Application
 
@@ -44,21 +62,43 @@ Clone the AGP repo and run the gateway
 
 #### Docker on Windows
 
-```bash
-git clone git@github.com:agntcy/agp.git
-cd agp/data-plane
+This is the preferred method
+
+```Powershell
 docker pull ghcr.io/agntcy/agp/gw:latest
+docker images
 ```
 
-```bash
-docker run -it `
+Output should be:
+
+```Powershell
+REPOSITORY              TAG       IMAGE ID       CREATED        SIZE
+ghcr.io/agntcy/agp/gw   latest    14500e96ae5e   18 hours ago   56.6MB
+```
+
+```Powershell
+ cd .\remote_agent_agp
+ 
+ docker run -it `
     -e PASSWORD=$env:PASSWORD `
-    -v ${PWD}/config/base/server-config.yaml:/config.yaml `
+    -v ${PWD}/gw/config/base/server-config.yaml:/config.yaml `
     -p 46357:46357 `
-    ghcr.io/agntcy/agp/gw:0.3.3 /gateway --config /config.yaml
+    ghcr.io/agntcy/agp/gw /gateway --config /config.yaml `
 ```
 
-### Server
+### Remote Agent
+
+The preferred method to run the AGP remote agent is Docker
+
+### Run Docker
+
+Run remote agent:
+
+```Powershell
+.\run_image.ps1
+```
+
+### Local
 
 You can run the server app by executing from /agentic-apps/remote_agent_agp/app:
 
@@ -97,4 +137,13 @@ On a successful run you should an output similar to the following:
 2025-03-12T14:13:34.776879Z  INFO data-plane-gateway ThreadId(04) agp_datapath::message_processing: new connection received from remote: (remote: Some(172.17.0.1:49344) - local: Some(172.17.0.2:46357))
 2025-03-12T14:13:42.881719Z  INFO data-plane-gateway ThreadId(07) agp_datapath::message_processing: new connection received from remote: (remote: Some(172.17.0.1:46470) - local: Some(172.17.0.2:46357))
 2025-03-12T14:13:42.954498Z  INFO data-plane-gateway ThreadId(04) agp_datapath::message_processing: end of stream conn_index=1
+```
+
+## Langgraph Studio
+
+- Run gateway and server
+
+```Powershell
+cd .\remote_agent_agp\client_studio\
+langgraph dev
 ```

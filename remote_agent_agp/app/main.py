@@ -7,11 +7,14 @@ import asyncio
 import json
 import logging
 import os
+import time
 
 import agp_bindings
 from agp_bindings import GatewayConfig
-from core.logging_config import configure_logging
 from dotenv import find_dotenv, load_dotenv
+
+from agent.lg import invoke_graph
+from core.logging_config import configure_logging
 
 # Define logger at the module level
 logger = logging.getLogger("app")
@@ -59,7 +62,7 @@ def create_error(error, code) -> str:
     return msg
 
 
-def message_parsing(payload) -> str:
+def process_message(payload) -> str:
     """
     Parse the message and looks for errors
     Replies to the incoming message if no error is detected
@@ -101,23 +104,24 @@ def message_parsing(payload) -> str:
             "The 'input.messages' field should be a non-empty list.", 500
         )
 
-    # Access the first message in the list.
-    first_message = messages[0]
-    if not isinstance(first_message, dict):
+    # Access the last message in the list.
+    last_message = messages[-1]
+    if not isinstance(last_message, dict):
         return create_error(
             "The first element in 'input.messages' should be a dictionary.", 500
         )
 
     # Extract the 'content' from the first message.
-    human_input_content = first_message.get("content")
+    human_input_content = last_message.get("content")
     if human_input_content is None:
         return create_error(
             "Missing 'content' in the first message of 'input.messages'.", 500
         )
 
-    messages = {
-        "messages": [{"role": "assistant", "content": "cats are wise"}]
-    }
+    # We send all messaages to graph
+    graph_result = invoke_graph(messages)
+
+    messages = {"messages": graph_result}
 
     # payload to add to the reply
     payload = {
@@ -179,7 +183,7 @@ async def connect_to_gateway(address) -> tuple[str, str]:
         while True:
             src, recv = await gateway.receive()
             payload = json.loads(recv.decode("utf8"))
-            msg = message_parsing(payload)
+            msg = process_message(payload)
 
             logger.info(f"Received message{msg}, from agent {src}")
 
@@ -194,6 +198,22 @@ async def connect_to_gateway(address) -> tuple[str, str]:
     finally:
         print(f"Shutting down agent {organization}/{namespace}/{local_agent}")
         return last_src, last_msg  # Return last received source and message
+
+
+async def try_connect_to_gateway(address, port, max_duration=300, initial_delay=1):
+    start_time = time.time()
+    delay = initial_delay
+
+    while time.time() - start_time < max_duration:
+        try:
+            src, msg = await connect_to_gateway(f"{address}:{port}")
+            return src, msg
+        except Exception as e:
+            logger.warning(f"Connection attempt failed: {e}. Retrying in {delay} seconds...")
+            await asyncio.sleep(delay)
+            delay = min(delay * 2, 30)  # Exponential backoff, max delay capped at 30 sec
+
+    raise TimeoutError("Failed to connect within the allowed time frame")
 
 
 def main() -> None:
@@ -218,7 +238,7 @@ def main() -> None:
     address = os.getenv("AGP_ADDRESS", "http://127.0.0.1")
 
     try:
-        src, msg = asyncio.run(connect_to_gateway(f"{address}:{port}"))
+        src, msg = asyncio.run(try_connect_to_gateway(address, port))
         logger.info(f"Last message received from: {src}")
         logger.info(f"Last message content: {msg}")
     except KeyboardInterrupt:

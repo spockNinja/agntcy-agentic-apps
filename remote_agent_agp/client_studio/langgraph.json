@@ -1,0 +1,7 @@
+{
+    "dependencies": ["."],
+    "graphs": {
+        "agp_local_graph": "./agp.py:build_graph"
+    },
+    "env": "./.env"
+}
