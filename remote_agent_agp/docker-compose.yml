@@ -1,7 +1,7 @@
 
 services:
   agp_gateway:
-    image: ghcr.io/agntcy/agp/gw:latest
+    image: ghcr.io/agntcy/agp/gw:0.3.3
     container_name: agp_gateway
     ports:
       - "46357:46357"
@@ -15,9 +15,10 @@ services:
       - agp_network  # Ensure both services are on the same network
 
   agp_remote_agent:
-    build:
-      context: .  # Set project root as the build context
-      dockerfile: remote_agent_docker/Dockerfile  # Dockerfile is inside remote_agent_docker/
+    image: agp_remote_agent:latest
+    # build:
+    #  context: .  # Set project root as the build context
+    #  dockerfile: remote_agent_docker/Dockerfile  # Dockerfile is inside remote_agent_docker/
     container_name: agp_remote_agent
     depends_on:
       - agp_gateway

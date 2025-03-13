@@ -83,7 +83,7 @@ ghcr.io/agntcy/agp/gw   latest    14500e96ae5e   18 hours ago   56.6MB
     -e PASSWORD=$env:PASSWORD `
     -v ${PWD}/gw/config/base/server-config.yaml:/config.yaml `
     -p 46357:46357 `
-    ghcr.io/agntcy/agp/gw /gateway --config /config.yaml
+    ghcr.io/agntcy/agp/gw /gateway --config /config.yaml `
 ```
 
 ### Remote Agent
