@@ -122,7 +122,8 @@ async def send_and_recv(msg) -> Dict[str, Any]:
         decoded_response = decode_response(response_data)
         logger.info(decoded_response)
 
-        return {"messages": decoded_response.get("messages", [])}
+        # We only store in shared memory the last message from remote to avoid duplication
+        return {"messages": decoded_response.get("messages", [])[-1]}
 
 
 def node_remote_agp(state: GraphState) -> Dict[str, Any]:
@@ -136,7 +137,7 @@ def node_remote_agp(state: GraphState) -> Dict[str, Any]:
 
     messages = convert_to_openai_messages(state["messages"])
 
-    # payload to send to autogen server at /runs endpoint
+    # payload to send to remote server at /runs endpoint
     payload = {
         "agent_id": "remote_agent",
         "input": {"messages": messages},
@@ -209,11 +210,11 @@ async def init_gateway_conn():
     GatewayHolder.gateway = await connect_to_gateway(address + ":" + port)
 
 
-def main():
+async def main():
     load_environment_variables()
-    init_gateway_conn()
+    await init_gateway_conn()
 
-    graph = build_graph()
+    graph = await build_graph()
     # Determine gateway address from environment variables or use the default
 
     inputs = {"messages": [HumanMessage(content="Write a story about a cat")]}
@@ -224,4 +225,4 @@ def main():
 
 # Main execution
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

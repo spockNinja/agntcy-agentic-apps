@@ -86,7 +86,7 @@ def build_graph() -> Any:
     builder.add_edge(START, "llm_node")
     builder.add_edge("llm_node", "end_node")
     builder.add_edge("end_node", END)
-    return builder.compile()
+    return builder.compile(name="agp_remote_graph")
 
 
 def invoke_graph(
