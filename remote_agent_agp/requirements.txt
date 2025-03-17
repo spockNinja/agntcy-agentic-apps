@@ -13,13 +13,14 @@ pydantic-settings==2.8.1
 uvicorn==0.34.0
 requests==2.32.3
 langgraph-cli[inmem]==0.1.74
+python-json-logger==3.3.0
 
 # Windows
 # ./windows_dist/agp_bindings-0.1.7-cp313-cp313-win_amd64.whl
 
 # Unix. 
 # Do not uncomment on windows....
-agp-bindings==0.1.9
+agp-bindings==0.1.10
 
 
 # If you need to debug langgraph studio

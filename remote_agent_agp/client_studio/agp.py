@@ -1,8 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025 Cisco and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 
-# Description: This file contains a sample graph client that makes a stateless request to the Remote Graph Server.
-# Usage: python3 client/rest.py
+
 
 import asyncio
 import json
@@ -12,6 +11,7 @@ from typing import Annotated, Any, Dict, List, TypedDict
 
 import agp_bindings
 from agp_bindings import GatewayConfig
+from agp_bindings import Gateway
 from dotenv import find_dotenv, load_dotenv
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.messages.utils import convert_to_openai_messages
@@ -23,7 +23,14 @@ logger = configure_logging()
 
 
 class GatewayHolder:
-    gateway = None
+    """
+    A simple class to hold a reference to a Gateway instance.
+
+    Attributes:
+        gateway (Gateway): An instance of Gateway that this holder encapsulates.
+            Defaults to None until a Gateway instance is assigned.
+    """
+    gateway: Gateway = None
 
 
 def load_environment_variables(env_file: str | None = None) -> None:
@@ -85,16 +92,21 @@ def decode_response(response_data: Dict[str, Any]) -> Dict[str, Any]:
 
 # Define the graph state
 class GraphState(TypedDict):
-    """Represents the state of the graph, containing a list of messages."""
+    """
+    Represents the state of the graph, containing a list of messages and a 
+    gateway holder.
+    """
 
     messages: Annotated[List[BaseMessage], add_messages]
     gateway: GatewayHolder
 
 
-async def send_and_recv(msg) -> Dict[str, Any]:
+async def send_and_recv(msg: str) -> Dict[str, Any]:
     """
-    Send a message to the remote endpoint and
-    waits for the reply
+    Sends a message (JSON string) to the remote endpoint and waits for the reply.
+
+    Args:
+        msg (str): A JSON string representing the request payload.
     """
 
     gateway = GatewayHolder.gateway
@@ -117,16 +129,24 @@ async def send_and_recv(msg) -> Dict[str, Any]:
         logger.error(json.dumps(error_msg))
         return {"messages": [HumanMessage(content=json.dumps(error_msg))]}
 
-    else:
-        # decode message
-        decoded_response = decode_response(response_data)
-        logger.info(decoded_response)
+    # decode message
+    decoded_response = decode_response(response_data)
+    logger.info(decoded_response)
 
-        # We only store in shared memory the last message from remote to avoid duplication
-        return {"messages": decoded_response.get("messages", [])[-1]}
+    # We only store in shared memory the last message from remote to avoid duplication
+    return {"messages": decoded_response.get("messages", [])[-1]}
 
 
-def node_remote_agp(state: GraphState) -> Dict[str, Any]:
+async def node_remote_agp(state: GraphState) -> Dict[str, Any]:
+    """
+    Sends a stateless request to the Remote Graph Server.
+
+    Args:
+        state (GraphState): The current graph state containing messages.
+
+    Returns:
+        Command[Literal["exception_node", "end_node"]]: Command to transition to the next node.
+    """
     if not state["messages"]:
         logger.error(json.dumps({"error": "GraphState contains no messages"}))
         return {"messages": [HumanMessage(content="Error: No messages in state")]}
@@ -147,12 +167,18 @@ def node_remote_agp(state: GraphState) -> Dict[str, Any]:
         "route": "/runs",
     }
 
-    msg = json.dumps(payload)
-    res = asyncio.run(send_and_recv(msg))
+    msg: str = json.dumps(payload)
+    res = await send_and_recv(msg)
     return res
 
 
-async def connect_to_gateway(address):
+async def connect_to_gateway(address: str) -> Gateway:
+    """
+    Connects to the gateway server and sets up the local agent.
+    Args:
+        address (str): The address of the gateway server in the format "http://127.0.0.1:46357"
+    """
+
     # An agent app is identified by a name in the format
     # /organization/namespace/agent_class/agent_id. The agent_class indicates the
     # type of agent, and there can be multiple instances of the same type running
@@ -179,7 +205,7 @@ async def connect_to_gateway(address):
     try:
         _ = await gateway.connect()
     except Exception as e:
-        raise ValueError(f"{e}")
+        raise ValueError(f"{e}") from e
     await gateway.subscribe(organization, namespace, local_agent, local_agent_id)
 
     # set the state to connect to the remote agent
@@ -204,6 +230,23 @@ async def build_graph() -> Any:
 
 
 async def init_gateway_conn():
+    """
+    Initializes the gateway connection using environment variables for configuration.
+
+    This asynchronous function retrieves connection parameters from the environment:
+        - PORT: The port number (default is "46357")
+        - AGP_ADDRESS: The gateway address (default is "http://127.0.0.1")
+
+    It constructs the connection URL by appending the port to the address and connects to the gateway
+    using the asynchronous function 'connect_to_gateway'. The resulting connection is stored in
+    'GatewayHolder.gateway'.
+
+    Raises:
+        Exception: If an error occurs during the connection process.
+
+    Returns:
+        None
+    """
     port = os.getenv("PORT", "46357")
     address = os.getenv("AGP_ADDRESS", "http://127.0.0.1")
     # TBD: Part of graph config
@@ -211,6 +254,10 @@ async def init_gateway_conn():
 
 
 async def main():
+    """
+    Main function to load environment variables, initialize the gateway connection,
+    build the state graph, and invoke it with sample inputs.
+    """
     load_environment_variables()
     await init_gateway_conn()
 
@@ -219,7 +266,7 @@ async def main():
 
     inputs = {"messages": [HumanMessage(content="Write a story about a cat")]}
     logger.info({"event": "invoking_graph", "inputs": inputs})
-    result = graph.invoke(inputs)
+    result = await graph.ainvoke(inputs)
     logger.info({"event": "final_result", "result": result})
 
 
