@@ -45,7 +45,7 @@ def load_environment_variables(env_file: str | None = None) -> None:
 
     if env_path:
         load_dotenv(env_path, override=True)
-        logging.info(f".env file loaded from {env_path}")
+        logging.info(".env file loaded from %s", env_path)
     else:
         logging.warning("No .env file found. Ensure environment variables are set.")
 
@@ -71,7 +71,7 @@ def process_message(payload) -> str:
 
     # Extract assistant_id from the payload
     agent_id = payload.get("agent_id")
-    logging.debug(f"Agent id: {agent_id}")
+    logging.debug("Agent id: %s", agent_id)
 
     # Validate that the assistant_id is not empty.
     if not payload.get("agent_id"):
@@ -83,6 +83,7 @@ def process_message(payload) -> str:
     if not payload.get("route") or route != "/runs":
         return create_error("Not Found.", 404)
 
+    message_id = None
     # Validate the config section: ensure that config.tags is a non-empty list.
     if (metadata := payload.get("metadata", None)) is not None:
         message_id = metadata.get("id")
@@ -156,7 +157,7 @@ async def connect_to_gateway(address) -> tuple[str, str]:
     local_agent = "server"
 
     # Define the service based on the local agent
-    gateway = agp_bindings.Gateway()
+    # local_gateway = agp_bindings.Gateway()
 
     # Configure gateway
     config = GatewayConfig(endpoint=address, insecure=True)
@@ -170,22 +171,20 @@ async def connect_to_gateway(address) -> tuple[str, str]:
     try:
         _ = await gateway.connect()
     except Exception as e:
-        raise ValueError(f"{e}")
+        raise ValueError(f"{e}") from e
     await gateway.subscribe(organization, namespace, local_agent, local_agent_id)
 
     last_src = ""
     last_msg = ""
 
     try:
-        logger.info(
-            f"AGP client started for agent: {organization}/{namespace}/{local_agent}"
-        )
+        logger.info("AGP client started for agent: %s/%s/%s", organization, namespace, local_agent)
         while True:
             src, recv = await gateway.receive()
             payload = json.loads(recv.decode("utf8"))
             msg = process_message(payload)
 
-            logger.info(f"Received message{msg}, from agent {src}")
+            logger.info("Received message %s, from agent %s", msg, src)
 
             # Publish reply message to src agent
             await gateway.publish_to(msg.encode(), src)
@@ -195,12 +194,29 @@ async def connect_to_gateway(address) -> tuple[str, str]:
             last_msg = msg
     except asyncio.CancelledError:
         print("Shutdown server")
+        raise
     finally:
         print(f"Shutting down agent {organization}/{namespace}/{local_agent}")
         return last_src, last_msg  # Return last received source and message
 
 
 async def try_connect_to_gateway(address, port, max_duration=300, initial_delay=1):
+    """
+    Attempts to connect to a gateway at the specified address and port using exponential backoff.
+    This asynchronous function repeatedly tries to establish a connection by calling the
+    connect_to_gateway function. If a connection attempt fails, it logs a warning and waits for a period
+    that doubles after each failure (capped at 30 seconds) until a successful connection is made or until
+    the accumulated time exceeds max_duration.
+    Parameters:
+        address (str): The hostname or IP address of the gateway.
+        port (int): The port number to connect to.
+        max_duration (int, optional): Maximum duration (in seconds) to attempt the connection. Default is 300.
+        initial_delay (int, optional): Initial delay (in seconds) before the first retry. Default is 1.
+    Returns:
+        tuple: Returns a tuple containing the source and a message received upon successful connection.
+    Raises:
+        TimeoutError: If the connection is not successfully established within max_duration seconds.
+    """
     start_time = time.time()
     delay = initial_delay
 
@@ -209,7 +225,7 @@ async def try_connect_to_gateway(address, port, max_duration=300, initial_delay=
             src, msg = await connect_to_gateway(f"{address}:{port}")
             return src, msg
         except Exception as e:
-            logger.warning(f"Connection attempt failed: {e}. Retrying in {delay} seconds...")
+            logger.warning("Connection attempt failed: %s. Retrying in %s seconds...", e, delay)
             await asyncio.sleep(delay)
             delay = min(delay * 2, 30)  # Exponential backoff, max delay capped at 30 sec
 
@@ -239,12 +255,12 @@ def main() -> None:
 
     try:
         src, msg = asyncio.run(try_connect_to_gateway(address, port))
-        logger.info(f"Last message received from: {src}")
-        logger.info(f"Last message content: {msg}")
+        logger.info("Last message received from: %s", src)
+        logger.info("Last message content: %s", msg)
     except KeyboardInterrupt:
         logger.info("Application interrupted")
     except Exception as e:
-        logger.info(f"Unhandled error: {e}")
+        logger.info("Unhandled error: %s", e)
 
 
 if __name__ == "__main__":
