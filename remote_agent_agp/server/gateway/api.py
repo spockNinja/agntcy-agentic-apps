@@ -110,6 +110,9 @@ def process_message(payload: dict) -> str:
         )
 
     fastapi_app = GatewayHolder.get_fastapi_app()
+    if fastapi_app is None:
+        logger.error("FastAPI app is not available")
+        return create_error("Internal server error", 500)
     # We send all messages to graph
 
     client = TestClient(fastapi_app)
