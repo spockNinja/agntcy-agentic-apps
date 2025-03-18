@@ -1,3 +1,5 @@
+"""Module gateway_holder: Contains the GatewayHolder class for managing the Gateway instance and FastAPI app."""
+
 from typing import Optional
 
 from agp_bindings import Gateway, GatewayConfig

@@ -1,3 +1,7 @@
+
+
+"""Module containing the AgpAgent class for managing agent details."""
+ 
 class AgpAgent:
     """
     Represents an agent with configuration details.
