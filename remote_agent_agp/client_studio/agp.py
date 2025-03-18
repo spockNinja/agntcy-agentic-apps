@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-
 import asyncio
 import json
 import os
@@ -31,6 +30,20 @@ class GatewayHolder:
             Defaults to None until a Gateway instance is assigned.
     """
     gateway: Gateway = None
+
+    @classmethod
+    def get_gateway(cls) -> Gateway:
+        """
+        Returns the stored Gateway instance.
+        """
+        return cls.gateway
+
+    @classmethod
+    def set_gateway(cls, gateway: Gateway) -> None:
+        """
+        Sets the Gateway instance.
+        """
+        cls.gateway = gateway
 
 
 def load_environment_variables(env_file: str | None = None) -> None:
@@ -164,7 +177,7 @@ async def node_remote_agp(state: GraphState) -> Dict[str, Any]:
         "model": "gpt-4o",
         "metadata": {"id": str(uuid.uuid4())},
         # Add the route field to emulate the REST API
-        "route": "/runs",
+        "route": "/api/v1/runs",
     }
 
     msg: str = json.dumps(payload)

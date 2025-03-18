@@ -2,7 +2,7 @@
 FROM python:3.12
 
 # Set working directory inside the container
-WORKDIR /app
+WORKDIR /server
 
 # Install system dependencies including Rust
 RUN apt-get update && apt-get install -y \
@@ -20,8 +20,8 @@ RUN python -m pip install --upgrade pip
 # Copy requirements.txt from the parent directory
 COPY ../requirements.txt /app/requirements.txt
 
-# Copy the entire app source code from the parent directory
-COPY ../app /app
+# Copy the entire server source code from the parent directory
+COPY ../server /server
 
 # Ensure Rust is available in PATH
 ENV PATH="/root/.cargo/bin:$PATH"

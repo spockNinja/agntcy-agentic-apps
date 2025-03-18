@@ -9,17 +9,16 @@ import logging
 import os
 import time
 
-import agp_bindings
-from agp_bindings import GatewayConfig
 from dotenv import find_dotenv, load_dotenv
+from fastapi.testclient import TestClient
 
-from agent.lg import invoke_graph
+from agpagent.agpagent import AgpAgent
 from core.logging_config import configure_logging
+from gateway.gatewayholder import GatewayHolder
+from rest.app import create_fastapi_app
 
 # Define logger at the module level
 logger = logging.getLogger("app")
-
-gateway = agp_bindings.Gateway()
 
 
 def load_environment_variables(env_file: str | None = None) -> None:
@@ -52,7 +51,14 @@ def load_environment_variables(env_file: str | None = None) -> None:
 
 def create_error(error, code) -> str:
     """
-    Creates a reply message with an error code
+    Creates a reply message with an error code.
+
+    Parameters:
+        error (str): The error message that will be included in the reply.
+        code (int): The numerical code representing the error.
+
+    Returns:
+        str: A JSON-formatted string encapsulating the error message and error code.
     """
     payload = {
         "message": error,
@@ -62,10 +68,25 @@ def create_error(error, code) -> str:
     return msg
 
 
-def process_message(payload) -> str:
+def process_message(payload: dict) -> str:
     """
-    Parse the message and looks for errors
-    Replies to the incoming message if no error is detected
+    Parse and process the incoming payload message.
+    This function decodes the incoming payload, validates essential fields, extracts required information,
+    and forwards the request to a FastAPI app. It then returns the server's response or handles errors appropriately.
+    Parameters:
+        payload (dict): A dictionary containing the message details. Expected keys include:
+            - "agent_id": Identifier for the agent; must be non-empty.
+            - "route": The API route to which the message should be sent.
+            - "input": A dictionary with a key "messages", which is a non-empty list where each element is a dictionary.
+                       The last message in this list should contain the human input under the "content" key.
+            - "metadata": (Optional) A dictionary that may contain an "id" for tracking purposes.
+    Returns:
+        str: A JSON string representing the reply. This is either the successful response from the FastAPI server 
+             when a status code 200 is returned, or a JSON encoded error message if validation fails.
+    Raises:
+        Exception: If the FastAPI server returns a status code other than 200, an exception with the status code
+                   and error details is raised.
+
     """
     logging.debug("Decoded payload: %s", payload)
 
@@ -80,7 +101,7 @@ def process_message(payload) -> str:
     # Extract the route from the message payload.
     # This step is done to emulate the behavior of the REST API.
     route = payload.get("route")
-    if not payload.get("route") or route != "/runs":
+    if not route:
         return create_error("Not Found.", 404)
 
     message_id = None
@@ -119,8 +140,19 @@ def process_message(payload) -> str:
             "Missing 'content' in the first message of 'input.messages'.", 500
         )
 
-    # We send all messaages to graph
-    graph_result = invoke_graph(messages)
+    fastapi_app = GatewayHolder.get_fastapi_app()
+    # We send all messages to graph
+
+    client = TestClient(fastapi_app)
+    response = client.post(route, json=payload)
+
+    if response.status_code == 200:
+        return response.json()
+    else:
+        # handle errors appropriately
+        raise Exception(f"FastAPI internal error: {response.status_code}, {response.text}")     
+    
+    # graph_result = invoke_graph(messages)
 
     messages = {"messages": graph_result}
 
@@ -136,7 +168,7 @@ def process_message(payload) -> str:
     return msg
 
 
-async def connect_to_gateway(address) -> tuple[str, str]:
+async def connect_to_gateway(address) -> int:
     """
     Connects to the remote gateway, subscribes to messages, and processes them.
 
@@ -152,39 +184,75 @@ async def connect_to_gateway(address) -> tuple[str, str]:
     # (e.g., horizontal scaling of the same app in Kubernetes). The agent_id
     # identifies a specific instance of the agent and it is returned by the
     # create_agent function is not provided
-    organization = "cisco"
-    namespace = "default"
-    local_agent = "server"
-
-    # Define the service based on the local agent
-    # local_gateway = agp_bindings.Gateway()
 
     # Configure gateway
-    config = GatewayConfig(endpoint=address, insecure=True)
-    gateway.configure(config)
+    GatewayHolder.set_config(endpoint=address, insecure=True)
+    gateway = GatewayHolder.get_gateway()
 
     # Connect to the gateway server
-    local_agent_id = await gateway.create_agent(organization, namespace, local_agent)
+    local_agent_id = await gateway.create_agent(
+        AgpAgent.get_organization(),
+        AgpAgent.get_namespace(),
+        AgpAgent.get_local_agent(),
+    )
 
     # Connect to the service and subscribe for messages
 
     try:
-        _ = await gateway.connect()
+        conn_id = await gateway.connect()
     except Exception as e:
         raise ValueError(f"{e}") from e
-    await gateway.subscribe(organization, namespace, local_agent, local_agent_id)
+
+    try:
+        await gateway.subscribe(
+            AgpAgent.get_organization(),
+            AgpAgent.get_namespace(),
+            AgpAgent.get_local_agent(),
+            local_agent_id,
+        )
+    except Exception as e:
+        logger.error("Error subscribing to gateway: %s", e)
+        raise RuntimeError("Error subscribing to gateway: unable to subscribe.") from e
+
+    return conn_id
+
+
+async def start_data_plane():
+    """
+    Asynchronously starts the data plane, which listens for incoming messages from the gateway,
+    processes each message, and sends a reply back to the source agent.
+    The function retrieves necessary agent configuration parameters such as organization,
+    namespace, and local agent information. It then enters an infinite loop, waiting for messages,
+    processing each message with process_message, logging the interaction, and replying to the source.
+    If the asynchronous task is cancelled, it logs a shutdown message and raises a RuntimeError.
+    Returns:
+        tuple: A tuple (last_src, last_msg) containing the last received source and the last processed message.
+    Raises:
+        RuntimeError: If the task is cancelled, triggering a shutdown of the data plane.
+    """
+
+    gateway = GatewayHolder.get_gateway()
 
     last_src = ""
     last_msg = ""
 
+    organization = AgpAgent.get_organization()
+    namespace = AgpAgent.get_namespace()
+    local_agent = AgpAgent.get_local_agent
+
     try:
-        logger.info("AGP client started for agent: %s/%s/%s", organization, namespace, local_agent)
+        logger.info(
+            "AGP client started for agent: %s/%s/%s",
+            organization,
+            namespace,
+            local_agent,
+        )
         while True:
             src, recv = await gateway.receive()
             payload = json.loads(recv.decode("utf8"))
             msg = process_message(payload)
 
-            logger.info("Received message %s, from agent %s", msg, src)
+            logger.info("Received message %s, from src agent %s", msg, src)
 
             # Publish reply message to src agent
             await gateway.publish_to(msg.encode(), src)
@@ -192,11 +260,13 @@ async def connect_to_gateway(address) -> tuple[str, str]:
             # Store the last received source and message
             last_src = src
             last_msg = msg
-    except asyncio.CancelledError:
-        print("Shutdown server")
-        raise
+    except asyncio.CancelledError as e:
+        logger.error("Shutdown server")
+        raise RuntimeError("Shutdown server - task cancelled.") from e
     finally:
-        print(f"Shutting down agent {organization}/{namespace}/{local_agent}")
+        logger.info(
+            "Shutting down agent %s/%s/%s", organization, namespace, local_agent
+        )
         return last_src, last_msg  # Return last received source and message
 
 
@@ -222,17 +292,20 @@ async def try_connect_to_gateway(address, port, max_duration=300, initial_delay=
 
     while time.time() - start_time < max_duration:
         try:
-            src, msg = await connect_to_gateway(f"{address}:{port}")
-            return src, msg
+            return await connect_to_gateway(f"{address}:{port}")
         except Exception as e:
-            logger.warning("Connection attempt failed: %s. Retrying in %s seconds...", e, delay)
+            logger.warning(
+                "Connection attempt failed: %s. Retrying in %s seconds...", e, delay
+            )
             await asyncio.sleep(delay)
-            delay = min(delay * 2, 30)  # Exponential backoff, max delay capped at 30 sec
+            delay = min(
+                delay * 2, 30
+            )  # Exponential backoff, max delay capped at 30 sec
 
     raise TimeoutError("Failed to connect within the allowed time frame")
 
 
-def main() -> None:
+async def main() -> None:
     """
     Entry point for running the application.
 
@@ -250,13 +323,15 @@ def main() -> None:
 
     load_environment_variables()
 
+    GatewayHolder.create_gateway()
+    GatewayHolder.set_fastapi_app(create_fastapi_app())
+
     port = os.getenv("PORT", "46357")
     address = os.getenv("AGP_ADDRESS", "http://127.0.0.1")
 
     try:
-        src, msg = asyncio.run(try_connect_to_gateway(address, port))
-        logger.info("Last message received from: %s", src)
-        logger.info("Last message content: %s", msg)
+        _ = await try_connect_to_gateway(address, port)
+        await start_data_plane()
     except KeyboardInterrupt:
         logger.info("Application interrupted")
     except Exception as e:
@@ -264,4 +339,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
