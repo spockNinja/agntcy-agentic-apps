@@ -8,9 +8,7 @@ import os
 import uuid
 from typing import Annotated, Any, Dict, List, TypedDict
 
-import agp_bindings
-from agp_bindings import GatewayConfig
-from agp_bindings import Gateway
+from agp_bindings import GatewayConfig, Gateway
 from dotenv import find_dotenv, load_dotenv
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.messages.utils import convert_to_openai_messages
@@ -204,7 +202,7 @@ async def connect_to_gateway(address: str) -> Gateway:
     remote_agent = "server"
 
     # Define the service based on the local agent
-    gateway = agp_bindings.Gateway()
+    gateway = Gateway()
 
     # Configure gateway
     config = GatewayConfig(endpoint=address, insecure=True)
