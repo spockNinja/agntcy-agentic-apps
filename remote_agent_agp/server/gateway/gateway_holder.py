@@ -19,7 +19,7 @@ class GatewayHolder:
     fastapi_app: Optional[FastAPI] = None
 
     @classmethod
-    def get_fastapi_app(cls) -> FastAPI:
+    def get_fastapi_app(cls) -> FastAPI | None:
         """
         Returns the stored FastAPI application instance.
         """
