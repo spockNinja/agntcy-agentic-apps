@@ -2,16 +2,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-
 import asyncio
 import json
 import os
 import uuid
 from typing import Annotated, Any, Dict, List, TypedDict
 
-import agp_bindings
-from agp_bindings import GatewayConfig
-from agp_bindings import Gateway
+from agp_bindings import GatewayConfig, Gateway
 from dotenv import find_dotenv, load_dotenv
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.messages.utils import convert_to_openai_messages
@@ -31,6 +28,20 @@ class GatewayHolder:
             Defaults to None until a Gateway instance is assigned.
     """
     gateway: Gateway = None
+
+    @classmethod
+    def get_gateway(cls) -> Gateway:
+        """
+        Returns the stored Gateway instance.
+        """
+        return cls.gateway
+
+    @classmethod
+    def set_gateway(cls, gateway: Gateway) -> None:
+        """
+        Sets the Gateway instance.
+        """
+        cls.gateway = gateway
 
 
 def load_environment_variables(env_file: str | None = None) -> None:
@@ -164,7 +175,7 @@ async def node_remote_agp(state: GraphState) -> Dict[str, Any]:
         "model": "gpt-4o",
         "metadata": {"id": str(uuid.uuid4())},
         # Add the route field to emulate the REST API
-        "route": "/runs",
+        "route": "/api/v1/runs",
     }
 
     msg: str = json.dumps(payload)
@@ -191,7 +202,7 @@ async def connect_to_gateway(address: str) -> Gateway:
     remote_agent = "server"
 
     # Define the service based on the local agent
-    gateway = agp_bindings.Gateway()
+    gateway = Gateway()
 
     # Configure gateway
     config = GatewayConfig(endpoint=address, insecure=True)

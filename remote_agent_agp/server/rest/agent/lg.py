@@ -1,14 +1,17 @@
-# Build the state graph
+# SPDX-FileCopyrightText: Copyright (c) 2025 Cisco and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
 
-import logging
+# Build the Langgraph Application
+
 import os
 import sys
 from typing import Annotated, Any, Dict, List, Optional, TypedDict
 
+
 from dotenv import load_dotenv
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from langchain_core.messages.utils import convert_to_openai_messages
+from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.messages.utils import convert_to_openai_messages
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
@@ -19,10 +22,10 @@ parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 # Add the parent directory to sys.path
 sys.path.insert(0, parent_dir)
 
-from agent.prompts import Prompts
 from core.logging_config import configure_logging  # noqa: E402
+from .prompts import Prompts
 
-logger = logging.getLogger(__file__)
+logger = configure_logging()
 
 
 # Define the graph state
@@ -34,16 +37,19 @@ class GraphState(TypedDict):
 
 # Graph node that makes a stateless request to the Remote Graph Server
 def end_node(state: GraphState) -> Dict[str, Any]:
-    logger.info(f"Thread end: {state.values()}")
+    """
+    Ends the graph by logging the state and returning an empty messages list.
+    """
+    logger.info("Thread end: %s", state.values())
     return {"messages": []}
 
 
 def llm_node(state: GraphState) -> Dict[str, Any]:
     """
-    Creates a plan to solve the user's request
+    Sends the user prompt to LLM and returns the response.
 
     Args:
-        state (State): The current conversation state containing messages and rounds.
+        state (State): The current conversation state containing messages.
 
     Returns:
         State: The updated state with the assistant's response and incremented rounds.
@@ -69,7 +75,7 @@ def llm_node(state: GraphState) -> Dict[str, Any]:
         llm_response = generate.invoke({"messages": state["messages"]})
         return {"messages": [llm_response]}
     except RuntimeError as e:
-        logger.error(f"Error in generation_node: {e}")
+        logger.error("Error in generation_node: %s", e)
         return {"messages": []}
 
 
@@ -86,7 +92,7 @@ def build_graph() -> Any:
     builder.add_edge(START, "llm_node")
     builder.add_edge("llm_node", "end_node")
     builder.add_edge("end_node", END)
-    return builder.compile(name="agp_remote_graph")
+    return builder.compile()
 
 
 def invoke_graph(
@@ -126,17 +132,20 @@ def invoke_graph(
             raise KeyError(f"Last message does not contain 'content': {last_message}")
 
         ai_message_content = last_message["content"]
-        logger.info(f"AI message content: {ai_message_content}")
+        logger.info("AI message content: %s", ai_message_content)
         return messages_list
 
     except Exception as e:
-        logger.error(f"Error invoking graph: {e}", exc_info=True)
-        return [{"role": "assistant", "content": "Error processing user message"}]
+        logger.error("Error invoking graph: %s", e, exc_info=True)
+        messages.append({"role": "assistant", "content": str(e)})
+        return messages
 
 
 def main():
+    """
+    Main function to initialize the environment, build the graph, and invoke it.
+    """
     # Initialize logger
-    logger = configure_logging()
     load_dotenv(override=True)
     graph = build_graph()
     inputs = {"messages": [HumanMessage(content="Write a story about a cat")]}

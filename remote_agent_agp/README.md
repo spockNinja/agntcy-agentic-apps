@@ -52,39 +52,12 @@ agp_remote_agent        latest    054fbed666f9   About a minute ago   4.32GB
 
 ### Gateway
 
-Clone the AGP repo and run the gateway
+#### Docker
 
-   ```bash
-   git clone git@github.com:agntcy/agp.git
-   cd agp/data-plane/testing
-   task run:agp
+   ```Powershell
+   cd .\remote_agent_agp\
+   run_gw_image.ps1
    ```
-
-#### Docker on Windows
-
-This is the preferred method
-
-```Powershell
-docker pull ghcr.io/agntcy/agp/gw:latest
-docker images
-```
-
-Output should be:
-
-```Powershell
-REPOSITORY              TAG       IMAGE ID       CREATED        SIZE
-ghcr.io/agntcy/agp/gw   latest    14500e96ae5e   18 hours ago   56.6MB
-```
-
-```Powershell
- cd .\remote_agent_agp
- 
- docker run -it `
-    -e PASSWORD=$env:PASSWORD `
-    -v ${PWD}/gw/config/base/server-config.yaml:/config.yaml `
-    -p 46357:46357 `
-    ghcr.io/agntcy/agp/gw /gateway --config /config.yaml `
-```
 
 ### Remote Agent
 
