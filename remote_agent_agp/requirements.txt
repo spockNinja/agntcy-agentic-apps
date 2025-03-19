@@ -15,6 +15,6 @@ requests==2.32.3
 langgraph-cli[inmem]==0.1.74
 python-json-logger==3.3.0
 agp-bindings==0.1.10
-httpx==0.28.1
+agp-api==0.0.2
 # If you need to debug langgraph studio
 # debugpy==1.8.12
