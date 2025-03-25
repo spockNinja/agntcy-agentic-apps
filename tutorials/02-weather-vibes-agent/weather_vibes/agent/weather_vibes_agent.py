@@ -13,10 +13,7 @@ from openai import OpenAI
 from agent_framework.utils.logging import AgentLogger
 
 from ..tools import WeatherTool, RecommendationsTool, YouTubeTool
-try:
-    from .descriptor import WEATHER_VIBES_DESCRIPTOR
-except ImportError:
-    from tutorials.02-weather-vibes-agent.weather_vibes.agent.descriptor import WEATHER_VIBES_DESCRIPTOR
+from .descriptor import WEATHER_VIBES_DESCRIPTOR
 
 class WeatherVibesAgent(Agent):
     """
