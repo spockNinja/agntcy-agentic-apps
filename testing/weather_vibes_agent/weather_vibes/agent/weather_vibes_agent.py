@@ -33,4 +33,5 @@ class WeatherVibesAgent(Agent):
         template_dir = Path(__file__).parent.parent / "templates"
         self.template_env = Environment(
             loader=FileSystemLoader(template_dir),
-            trim
+            trim_blocks=True
+        )
