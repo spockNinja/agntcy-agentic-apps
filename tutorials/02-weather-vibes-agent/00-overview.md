@@ -15,6 +15,9 @@ Tool integration
 Structured inputs and outputs
 Let's build this step by step!
 
+Follow along with this tutorial to build your own Weather Vibes agent.
+
+
 ### Step 1: Project Setup
 
 ```
