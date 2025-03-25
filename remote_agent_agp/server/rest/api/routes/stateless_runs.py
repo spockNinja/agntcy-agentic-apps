@@ -5,24 +5,21 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, HTTPException, status
+import langsmith as ls
+from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import JSONResponse
-from ...models.models import Any, ErrorResponse, RunCreateStateless, Union
+
 from ...agent.lg import invoke_graph
+from ...models.models import Any, ErrorResponse, RunCreateStateless, Union
 
 router = APIRouter(tags=["Stateless Runs"])
 logger = logging.getLogger(__name__)  # This will be "app.api.routes.<name>"
 
 
-@router.post(
-    "/runs",
-    response_model=Any,
-    responses={
-        "404": {"model": ErrorResponse},
-        "409": {"model": ErrorResponse},
-        "422": {"model": ErrorResponse},
-    },
-    tags=["Stateless Runs"],
+@ls.traceable(
+    run_type="tool",
+    name="Stateless Run",
+    tags=["rest", "server", "post", "stateless", "run"],
 )
 def run_stateless_runs_post(body: RunCreateStateless) -> Union[Any, ErrorResponse]:
     """
@@ -111,6 +108,29 @@ def run_stateless_runs_post(body: RunCreateStateless) -> Union[Any, ErrorRespons
 
     # In a real application, additional processing (like starting a background task) would occur here.
     return JSONResponse(content=payload, status_code=status.HTTP_200_OK)
+
+
+@router.post(
+    "/runs",
+    response_model=Any,
+    responses={
+        "404": {"model": ErrorResponse},
+        "409": {"model": ErrorResponse},
+        "422": {"model": ErrorResponse},
+    },
+    tags=["Stateless Runs"],
+)
+def middlware_run_stateless_runs_post(
+    body: RunCreateStateless, request: Request
+) -> Union[Any, ErrorResponse]:
+    """
+    Create Background Run
+    """
+    # Access headers from the request object
+    headers = request.headers
+    # Log headers if needed
+    logger.debug("Request headers: %s", dict(headers))
+    return run_stateless_runs_post(body, langsmith_extra={"parent": request.headers})
 
 
 @router.post(

@@ -28,8 +28,9 @@ class Config:
     """
 
     gateway_container = GatewayContainer()
-    agent_container = AgentContainer()
-    remote_agent = "server"
+    agent_container = AgentContainer(local_agent="code_analyzer")
+    # For client
+    remote_agent = "code_analyzer"
 
 
 async def main() -> None:
@@ -48,8 +49,6 @@ async def main() -> None:
     configure_logging()
     logger.info("Starting AGP application...")
 
-    load_dotenv(override=True)
-
     # GatewayHolder.create_gateway()
     Config.gateway_container.set_config(
         endpoint="http://127.0.0.1:46357", insecure=True
@@ -58,8 +57,7 @@ async def main() -> None:
 
     # Call connect_with_retry
     _ = await Config.gateway_container.connect_with_retry(
-        agent_container=Config.agent_container, max_duration=10, initial_delay=1
-    )
+        agent_container=Config.agent_container, max_duration=10, initial_delay=1)
 
     try:
         await Config.gateway_container.start_server(
@@ -72,4 +70,5 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
+    load_dotenv(override=True)
     asyncio.run(main())
