@@ -4,7 +4,6 @@ Tool for generating item recommendations based on weather conditions.
 from typing import Dict, Any, List
 from pydantic import BaseModel
 from agent_framework.tools.base import BaseTool
-from agent_framework.utils.llm import OpenAIChat
 
 class RecommendationsInput(BaseModel):
     """Input schema for recommendations tool"""
@@ -56,7 +55,7 @@ class RecommendationsTool(BaseTool):
         
         # Wind-related recommendations
         if weather.get("wind_speed", 0) > 20:
-            recommendations.append("🌬️", "🪁")
+            recommendations.extend(["🌬️", "🪁"])
         
         # Return unique recommendations, limited to max_items
         unique_recommendations = list(set(recommendations))

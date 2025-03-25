@@ -9,11 +9,14 @@ from jinja2 import Environment, FileSystemLoader
 
 from agent_framework.agent import Agent
 from agent_framework.state import AgentState
-from agent_framework.utils.llm import OpenAIChat
+from openai import OpenAI
 from agent_framework.utils.logging import AgentLogger
 
 from ..tools import WeatherTool, RecommendationsTool, YouTubeTool
-from .descriptor import WEATHER_VIBES_DESCRIPTOR
+try:
+    from .descriptor import WEATHER_VIBES_DESCRIPTOR
+except ImportError:
+    from tutorials.02-weather-vibes-agent.weather_vibes.agent.descriptor import WEATHER_VIBES_DESCRIPTOR
 
 class WeatherVibesAgent(Agent):
     """
@@ -37,11 +40,8 @@ class WeatherVibesAgent(Agent):
             lstrip_blocks=True
         )
         
-        # Set up LLM
-        self.llm = OpenAIChat(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            model="gpt-4"
-        )
+        # Set up OpenAI client instead of OpenAIChat
+        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         
         # Set up logger
         self.logger = AgentLogger(agent_id=self.agent_id)
