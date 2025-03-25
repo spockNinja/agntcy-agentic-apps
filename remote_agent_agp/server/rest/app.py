@@ -29,6 +29,7 @@ from dotenv import find_dotenv, load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.routing import APIRoute
+from langsmith.middleware import TracingMiddleware
 from starlette.middleware.cors import CORSMiddleware
 
 from .api.routes import stateless_runs
@@ -205,5 +206,7 @@ def create_fastapi_app() -> FastAPI:
         allow_headers=["*"],
         expose_headers=["*"],
     )
+
+    app.add_middleware(TracingMiddleware)
 
     return app
