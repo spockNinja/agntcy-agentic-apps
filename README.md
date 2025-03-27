@@ -10,6 +10,7 @@ These examples serve as reference implementations and learning resources for
 building agent-based applications using the AGNTCY framework. Additional
 documentation can be found in each repo subfolder.
 
+```
 └── remote_agent_agp
     ├── README.md
     ├── api_client
@@ -20,6 +21,7 @@ documentation can be found in each repo subfolder.
     ├── requirements.txt
     ├── server
     └── update_req.py
+```
 
 ## Copyright Notice
 
