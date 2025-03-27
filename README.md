@@ -25,7 +25,7 @@ documentation can be found in each repo subfolder.
 
 ## IoA Agentic Apps
 
-A list of IoA Agentic Apps in other repositores :
+A list of IoA Agentic Apps in other Github repositores :
 
 - Terraform Code Analzyer : [tf-code-analyzer-agntcy-agent](https://github.com/cisco-outshift-ai-agents/tf-code-analyzer-agntcy-agent)
 - Terraform Code Reviewer: [tf-code-reviewer-agntcy-agent](https://github.com/cisco-outshift-ai-agents/tf-code-reviewer-agntcy-agent)
