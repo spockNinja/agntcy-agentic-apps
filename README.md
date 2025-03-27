@@ -19,7 +19,7 @@ documentation can be found in each repo subfolder.
     ├── remote_agent_docker
     ├── requirements.txt
     ├── server
-    └── update_req.p
+    └── update_req.py
 
 ## Copyright Notice
 
