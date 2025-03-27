@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 Cisco and/or its affiliates.
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
 
@@ -6,7 +6,9 @@ import asyncio
 import json
 import uuid
 from typing import Annotated, Any, Dict, List, TypedDict
+from langsmith import traceable
 
+from langsmith.run_helpers import get_current_run_tree
 from agp_api.gateway.gateway_container import GatewayContainer
 from agp_api.agent.agent_container import AgentContainer
 from dotenv import load_dotenv
@@ -31,7 +33,7 @@ class Config:
 
     gateway_container = GatewayContainer()
     agent_container = AgentContainer()
-    remote_agent = "server"
+    remote_agent = "code_analyzer"
 
 
 # Define the graph state
@@ -44,6 +46,11 @@ class GraphState(TypedDict):
     messages: Annotated[List[BaseMessage], add_messages]
 
 
+@traceable(
+    run_type="tool",
+    name="Client publish and receive messages",
+    tags=["agp", "client", "publish", "receive"],
+)
 async def send_and_recv(payload: Dict[str, Any], remote_agent: str) -> Dict[str, Any]:
     """
     Sends a payload to a remote agent and receives a response through the gateway container.
@@ -107,20 +114,34 @@ async def node_remote_agp(state: GraphState) -> Dict[str, Any]:
 
     messages = convert_to_openai_messages(state["messages"])
 
+    headers = {"Content-Type": "application/json"}
+
+    # Distributed tracing. All traces are stored in the same run tree.
+    if run_tree := get_current_run_tree():
+        # add langsmith-id to headers
+        headers.update(run_tree.to_headers())
+
     # payload to send to remote server at /runs endpoint
     payload: Dict[str, Any] = {
         "agent_id": "remote_agent",
         "input": {"messages": messages},
         "model": "gpt-4o",
         "metadata": {"id": str(uuid.uuid4())},
-        # Add the route field to emulate the REST API
+        # Add the fields to emulate the REST API
         "route": "/api/v1/runs",
+        "headers": headers,
+        "method": "POST",
     }
 
     res = await send_and_recv(payload, remote_agent=Config.remote_agent)
     return res
 
 
+@traceable(
+    run_type="tool",
+    name="Client init connect to AGP Gateway",
+    tags=["agp", "client", "connect", "gateway"],
+)
 async def init_client_gateway_conn(remote_agent: str = "server") -> None:
     """Initialize connection to the gateway.
     Establishes connection to a gateway service running on localhost using retry mechanism.
@@ -150,7 +171,6 @@ async def init_client_gateway_conn(remote_agent: str = "server") -> None:
     )
 
 
-# Build the state graph
 async def build_graph() -> Any:
     """
     Constructs the state graph for handling requests.
@@ -158,7 +178,7 @@ async def build_graph() -> Any:
     Returns:
         StateGraph: A compiled LangGraph state graph.
     """
-    await init_client_gateway_conn()
+    await init_client_gateway_conn(remote_agent=Config.remote_agent)
     builder = StateGraph(GraphState)
     builder.add_node("node_remote_agp", node_remote_agp)
     builder.add_edge(START, "node_remote_agp")
@@ -166,6 +186,11 @@ async def build_graph() -> Any:
     return builder.compile()
 
 
+@traceable(
+    run_type="tool",
+    name="Entry point for AGP client",
+    tags=["agp", "client", "main"],
+)
 async def main():
     """
     Main function to load environment variables, initialize the gateway connection,
@@ -182,4 +207,5 @@ async def main():
 
 # Main execution
 if __name__ == "__main__":
+    load_dotenv(override=True)
     asyncio.run(main())

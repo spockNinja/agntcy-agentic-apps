@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 Cisco and/or its affiliates.
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
 # Build the Langgraph Application
@@ -7,7 +7,6 @@ import os
 import sys
 from typing import Annotated, Any, Dict, List, Optional, TypedDict
 
-
 from dotenv import load_dotenv
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -15,6 +14,8 @@ from langchain_core.messages.utils import convert_to_openai_messages
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
+from langsmith import traceable
+
 
 # Get the absolute path of the parent directory
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -95,6 +96,7 @@ def build_graph() -> Any:
     return builder.compile()
 
 
+@traceable
 def invoke_graph(
     messages: List[Dict[str, str]], graph: Optional[Any] = None
 ) -> Optional[dict[Any, Any] | list[dict[Any, Any]]]:
