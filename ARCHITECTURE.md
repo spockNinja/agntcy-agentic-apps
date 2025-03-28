@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Agent Gateway Protocol (AGP) provides a standardized architecture for building distributed agent applications. It enables seamless communication between client applications and remote agent services through a gateway intermediary, allowing for scalable, secure, and flexible AI agent deployments.
+The Agent Gateway Protocol (AGP) (https://github.com/agntcy/agp) provides a standardized architecture for building distributed agent applications. It enables seamless communication between client applications and remote agent services through a gateway intermediary, allowing for scalable, secure, and flexible AI agent deployments.
 
 ```
 Client <-----> Gateway <----> Server
