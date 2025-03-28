@@ -23,6 +23,13 @@ documentation can be found in each repo subfolder.
     └── update_req.py
 ```
 
+## IoA Agentic Apps
+
+A list of IoA Agentic Apps in other Github repositores :
+
+- Terraform Code Analzyer : [tf-code-analyzer-agntcy-agent](https://github.com/cisco-outshift-ai-agents/tf-code-analyzer-agntcy-agent)
+- Terraform Code Reviewer: [tf-code-reviewer-agntcy-agent](https://github.com/cisco-outshift-ai-agents/tf-code-reviewer-agntcy-agent)
+
 ## Copyright Notice
 
 [Copyright Notice and License](./LICENSE.md)
