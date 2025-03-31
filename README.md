@@ -250,6 +250,16 @@ These features will be incorporated into future tutorials as they become availab
 
 We welcome contributions to improve these tutorials! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to submit improvements.
 
+## Other IoA Agentic Apps
+
+A list of IoA Agentic Apps in other Github repositores :
+
+- Terraform Code Analzyer : [tf-code-analyzer-agntcy-agent](https://github.com/cisco-outshift-ai-agents/tf-code-analyzer-agntcy-agent)
+- Terraform Code Reviewer: [tf-code-reviewer-agntcy-agent](https://github.com/cisco-outshift-ai-agents/tf-code-reviewer-agntcy-agent)
+
+## Copyright Notice
+
+
 ## License
 
 This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
