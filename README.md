@@ -92,11 +92,11 @@ We extend this framework to implement the Agent Connect Protocol, enabling distr
 The repository includes complete, working examples that demonstrate ACP in action:
 
 - [Remote Agent](remote_agent_agp/README.md) - A template for building remote agent applications
-TODO: 
+TODO:
 - [Thread-Based Chat](thread_chat_demo) - Demonstrates thread state management (Coming soon!)
-TODO: 
+TODO:
 - [Streaming Agent](streaming_demo) - Shows real-time streaming capabilities (Coming soon!)
-TODO: 
+TODO:
 - [Interrupt-Based Workflow](interrupt_workflow) - Demonstrates interactive agent interrupts (Coming soon!)
 
 ## ACP Implementation Patterns
@@ -259,7 +259,8 @@ A list of IoA Agentic Apps in other Github repositores :
 
 ## Copyright Notice
 
+[Copyright Notice and License](./LICENSE.md)
 
-## License
+Distributed under Apache 2.0 License. See LICENSE for more information.
 
-This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
+Copyright AGNTCY Contributors (https://github.com/agntcy)
