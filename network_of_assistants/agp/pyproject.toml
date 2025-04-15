@@ -1,0 +1,15 @@
+[project]
+name = "agp"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.13"
+dependencies = [
+    "agp-bindings==0.2.3",
+]
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[tool.pdm.build]
+includes = ["agp/"]

@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  moderator:
+    build:
+      context: .
+      dockerfile: moderator/Dockerfile
+    networks:
+      - app_network
+    environment:
+      - MODEL_BASE_URL
+      - MODEL_API_KEY
+      - AGP_ENDPOINT=http://agp:46357
+
+  user_proxy:
+    build:
+      context: .
+      dockerfile: user_proxy/Dockerfile
+    networks:
+      - app_network
+    environment:
+      - AGP_ENDPOINT=http://agp:46357
+    stdin_open: true
+    tty: true
+
+  pdf_assistant:
+    build:
+      context: .
+      dockerfile: pdf_assistant/Dockerfile
+    networks:
+      - app_network
+    environment:
+      - ASSISTANT_LLM_ENDPOINT
+      - ASSISTANT_LLM_KEY
+      - ASSISTANT_LLM_TYPE=azure
+      - AGP_ENDPOINT=http://agp:46357
+
+  agp:
+    image: ghcr.io/agntcy/agp/gw:0.3.11
+    networks:
+      - app_network
+    volumes:
+      - ./agp-config.yaml:/config.yaml
+    command: ["/gateway", "--config", "/config.yaml"]
+
+networks:
+  app_network:
+    driver: bridge
