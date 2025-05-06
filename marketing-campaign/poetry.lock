@@ -5,27 +5,25 @@ name = "agntcy-acp"
 version = "1.1.2"
 description = "Agent Connect Protocol SDK"
 optional = false
-python-versions = ">=3.9.0,<4.0"
+python-versions = "<4.0,>=3.9.0"
 groups = ["main"]
-files = []
-develop = true
+files = [
+    {file = "agntcy_acp-1.1.2-py3-none-any.whl", hash = "sha256:60ac3bad88525980be263a35a96ac531be48342bd6e7fe3e1e075a6707a3f063"},
+    {file = "agntcy_acp-1.1.2.tar.gz", hash = "sha256:969f4831561a47976c88a2fe27c8490ad6ff552f527c1eaf501fd7f1b0e1a5d4"},
+]
 
 [package.dependencies]
 agntcy-iomapper = {version = "0.2.2", extras = ["langgraph"]}
-aiohttp = ">= 3.8.4"
-aiohttp-retry = ">= 2.8.3"
-click = "^8.1.8"
-datamodel-code-generator = "^0.25.6"
-langgraph = "^0.3.16"
-openapi-spec-validator = "^0.7.1"
-pydantic = ">= 2"
-python-dateutil = ">= 2.8.2"
-typing-extensions = ">= 4.7.1"
-urllib3 = ">= 1.25.3, < 3.0.0"
-
-[package.source]
-type = "directory"
-url = "../../acp-sdk"
+aiohttp = ">=3.8.4"
+aiohttp-retry = ">=2.8.3"
+click = ">=8.1.8,<9.0.0"
+datamodel-code-generator = ">=0.25.6,<0.26.0"
+langgraph = ">=0.3.16,<0.4.0"
+openapi-spec-validator = ">=0.7.1,<0.8.0"
+pydantic = ">=2"
+python-dateutil = ">=2.8.2"
+typing-extensions = ">=4.7.1"
+urllib3 = ">=1.25.3,<3.0.0"
 
 [[package]]
 name = "agntcy-iomapper"
@@ -4793,4 +4791,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10.0,<4.0"
-content-hash = "dccabefad042afcefc340975569d067f6a55fe68695ce2b46634ddd4cbfb07d6"
+content-hash = "0c39ca9545945d7b3c1992e62e93f495b72c1005e16ef896875980e129a18c78"
