@@ -43,7 +43,7 @@ async def main():
                 ).model_dump()
             )
             # Send a signal to the graph to resume execution
-            await graph.ainvoke(commad, config=thread)
+            await graph.ainvoke(command, config=thread)
             curr_state = graph.get_state(thread)
 
         curr_state = graph.get_state(thread)
