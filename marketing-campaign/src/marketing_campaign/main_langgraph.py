@@ -37,7 +37,7 @@ async def main():
 
         # Check if graph is interrupted by mailcomposer
         while len(curr_state.tasks) and len(curr_state.tasks[0].interrupts) > 0:
-            commad = Command(
+            command = Command(
                 resume=mailcomposer.Message(
                     content="I need it in html", type=mailcomposer.Type.human
                 ).model_dump()
