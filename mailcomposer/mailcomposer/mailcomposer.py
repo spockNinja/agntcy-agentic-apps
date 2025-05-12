@@ -84,7 +84,7 @@ def format_email(state):
     state_after_formating = generate_email(state)
 
     new_answer = interrupt(
-        Message(type=MsgType.assistant, content="The email is formated, please confirm")
+        Message(type=MsgType.assistant, content="The email is formatted, please confirm")
     )
 
     print(new_answer)
