@@ -46,7 +46,6 @@ async def main():
             await graph.ainvoke(command, config=thread)
             curr_state = graph.get_state(thread)
 
-        curr_state = graph.get_state(thread)
         outputState = OverallState.model_validate(output)
 
         if len(outputState.operation_logs) > 0:
