@@ -2,14 +2,20 @@
 # SPDX-License-Identifier: Apache-2.0
 import os
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import interrupt
 from langchain_openai import AzureChatOpenAI
 from pydantic import SecretStr
 from langchain.prompts import PromptTemplate
-
-from .state import OutputState, AgentState, Message, Type as MsgType
+from .state import (
+    OutputState,
+    AgentState,
+    StatelessAgentState,
+    StatelessOutputState,
+    Message,
+    Type as MsgType,
+)
 
 # Initialize the Azure OpenAI model
 api_key = os.getenv("AZURE_OPENAI_API_KEY")
@@ -19,6 +25,8 @@ if not api_key:
 azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
 if not azure_endpoint:
     raise ValueError("AZURE_OPENAI_ENDPOINT must be set as an environment variable.")
+
+is_stateless = os.getenv("STATELESS", "true").lower() == "true"
 
 llm = AzureChatOpenAI(
     api_key=SecretStr(api_key),
@@ -124,7 +132,9 @@ def convert_messages(messages: list) -> list[BaseMessage]:
 
 
 # Define mail_agent function
-def email_agent(state: AgentState) -> OutputState | AgentState:
+def email_agent(
+    state: AgentState | StatelessAgentState,
+) -> OutputState | AgentState | StatelessOutputState | StatelessAgentState:
     """This agent is a skilled writer for a marketing company, creating formal and professional emails for publicity campaigns.
     It interacts with users to gather the necessary details.
     Once the user approves by sending "is_completed": true, the agent outputs the finalized email in "final_email".
@@ -144,25 +154,33 @@ def final_output(state: AgentState) -> OutputState:
 
 
 def generate_email(state: AgentState) -> AgentState:
-    # Generate the email
-    llm_messages = [
+    # Append messages from state to initial prompt
+    messages = [
         Message(
             type=MsgType.human,
             content=MARKETING_EMAIL_PROMPT_TEMPLATE.format(separator=SEPARATOR),
-        ),
-    ] + (state.messages or [])
-
-    state.messages = (state.messages or []) + [
-        Message(
-            type=MsgType.ai,
-            content=str(llm.invoke(convert_messages(llm_messages)).content),
         )
-    ]
+    ] + state.messages
+
+    # Call the LLM
+    ai_message = Message(
+        type=MsgType.ai, content=str(llm.invoke(convert_messages(messages)).content)
+    )
+
+    if is_stateless:
+        return {"messages": state.messages + [ai_message]}
+
+    else:
+        return {"messages": [ai_message]}
+
     return state
 
 
-# Create the graph and add the agent node
-graph_builder = StateGraph(AgentState, output=OutputState)
+if is_stateless:
+    graph_builder = StateGraph(StatelessAgentState, output=StatelessOutputState)
+else:
+    graph_builder = StateGraph(AgentState, output=OutputState)
+
 graph_builder.add_node("email_agent", email_agent)
 graph_builder.add_node("format_email", format_email)
 
@@ -172,7 +190,7 @@ graph_builder.add_edge("format_email", END)
 graph_builder.add_edge("email_agent", END)
 
 # Set up memory
-memory = MemorySaver()
+memory = InMemorySaver()
 
 # Compile the graph
 graph = graph_builder.compile(checkpointer=memory)
