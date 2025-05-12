@@ -111,7 +111,7 @@ def extract_mail(messages) -> str:
 
 
 def should_format_email(state: AgentState):
-    if state.is_completed:
+    if state.is_completed and not is_stateless:
         return "format_email"
     return END
 
@@ -185,12 +185,16 @@ graph_builder.add_node("email_agent", email_agent)
 graph_builder.add_node("format_email", format_email)
 
 graph_builder.add_edge(START, "email_agent")
+# This node will only be added in stateful mode since langgraph requires checkpointer if any node should interrupt
 graph_builder.add_conditional_edges("email_agent", should_format_email)
 graph_builder.add_edge("format_email", END)
 graph_builder.add_edge("email_agent", END)
 
-# Set up memory
-memory = InMemorySaver()
 
-# Compile the graph
-graph = graph_builder.compile(checkpointer=memory)
+if is_stateless:
+    print("mailcomposer - running in stateless mode")
+    graph = graph_builder.compile()
+else:
+    print("mailcomposer - running in stateful mode")
+    checkpointer = InMemorySaver()
+    graph = graph_builder.compile(checkpointer=checkpointer)
