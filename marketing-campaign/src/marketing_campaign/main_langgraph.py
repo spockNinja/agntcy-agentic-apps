@@ -16,8 +16,9 @@ async def main():
     inputState = OverallState(
         messages=[], operation_logs=[], has_composer_completed=False
     )
+
+    thread_id = uuid.uuid4()
     while True:
-        thread_id = uuid.uuid4()
         usermsg = input("YOU [Type OK when you are happy with the email proposed] >>> ")
         
         inputState.messages.append(mailcomposer.Message(content=usermsg, type=mailcomposer.Type.human))
