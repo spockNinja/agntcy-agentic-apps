@@ -9,7 +9,7 @@
   "specs": {
     "capabilities": {
       "threads": false,
-      "interrupts": false,
+      "interrupts": true,
       "callbacks": false
     },
     "input": {
