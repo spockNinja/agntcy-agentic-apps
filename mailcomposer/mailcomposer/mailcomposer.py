@@ -8,6 +8,7 @@ from langgraph.types import interrupt
 from langchain_openai import AzureChatOpenAI
 from pydantic import SecretStr
 from langchain.prompts import PromptTemplate
+
 from .state import (
     OutputState,
     AgentState,
@@ -17,7 +18,6 @@ from .state import (
     Type as MsgType,
 )
 
-# Initialize the Azure OpenAI model
 api_key = os.getenv("AZURE_OPENAI_API_KEY")
 if not api_key:
     raise ValueError("AZURE_OPENAI_API_KEY must be set as an environment variable.")
@@ -84,7 +84,9 @@ def format_email(state):
     state_after_formating = generate_email(state)
 
     new_answer = interrupt(
-        Message(type=MsgType.assistant, content="The email is formatted, please confirm")
+        Message(
+            type=MsgType.assistant, content="The email is formatted, please confirm"
+        )
     )
 
     print(new_answer)
@@ -110,8 +112,8 @@ def extract_mail(messages) -> str:
     return ""
 
 
-def should_format_email(state: AgentState):
-    if state.is_completed and not is_stateless:
+def should_format_email(state: AgentState | StatelessAgentState):
+    if state.is_complete and not is_stateless:
         return "format_email"
     return END
 
@@ -172,8 +174,6 @@ def generate_email(state: AgentState) -> AgentState:
 
     else:
         return {"messages": [ai_message]}
-
-    return state
 
 
 if is_stateless:
