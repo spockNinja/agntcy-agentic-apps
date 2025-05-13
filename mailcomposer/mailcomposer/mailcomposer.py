@@ -55,6 +55,7 @@ body
 {{separator}}
 DO NOT FORGET TO ADD THE SEPARATOR BEFORE THE SUBECT AND AFTER THE EMAIL BODY!
 SHOULD NEVER HAPPPEN TO HAVE THE SEPARATOR AFTER THE SUBJECT AND BEFORE THE EMAIL BODY! NEVER AFTER THE SUBJECT!
+DO NOT ADD EXTRA TEXT IN THE EMAIL, LIMIT YOURSELF IN GENERATING THE EMAIL
 """,
     template_format="jinja2",
 )
@@ -83,14 +84,15 @@ def format_email(state):
     state.messages = (state.messages or []) + [Message(**answer)]
     state_after_formating = generate_email(state)
 
-    new_answer = interrupt(
+    interrupt(
         Message(
             type=MsgType.assistant, content="The email is formatted, please confirm"
         )
     )
 
-    print(new_answer)
-
+    state_after_formating = StatelessAgentState(
+        **state_after_formating, is_completed=True
+    )
     return final_output(state_after_formating)
 
 
@@ -109,6 +111,8 @@ def extract_mail(messages) -> str:
             return splits[len(splits) - 2].strip()
         elif len(splits) == 2:
             return splits[1].strip()
+        elif len(splits) == 1:
+            return splits[0]
     return ""
 
 
@@ -145,8 +149,11 @@ def email_agent(
     return final_output(state) if state.is_completed else generate_email(state)
 
 
-def final_output(state: AgentState) -> OutputState:
+def final_output(
+    state: AgentState | StatelessAgentState,
+) -> OutputState | AgentState | StatelessOutputState | StatelessAgentState:
     final_mail = extract_mail(state.messages)
+
     output_state: OutputState = OutputState(
         messages=state.messages,
         is_completed=state.is_completed,
@@ -155,8 +162,11 @@ def final_output(state: AgentState) -> OutputState:
     return output_state
 
 
-def generate_email(state: AgentState) -> AgentState:
-    # Append messages from state to initial prompt
+def generate_email(
+    state: AgentState | StatelessAgentState,
+) -> (
+    OutputState | AgentState | StatelessOutputState | StatelessAgentState
+):  # Append messages from state to initial prompt
     messages = [
         Message(
             type=MsgType.human,
