@@ -113,7 +113,7 @@ def extract_mail(messages) -> str:
 
 
 def should_format_email(state: AgentState | StatelessAgentState):
-    if state.is_complete and not is_stateless:
+    if state.is_completed and not is_stateless:
         return "format_email"
     return END
 
