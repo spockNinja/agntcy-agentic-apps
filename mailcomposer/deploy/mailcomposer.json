@@ -9,7 +9,7 @@
   "specs": {
     "capabilities": {
       "threads": false,
-      "interrupts": false,
+      "interrupts": true,
       "callbacks": false
     },
     "input": {
@@ -147,7 +147,62 @@
       "required": ["test"],
       "title": "ConfigSchema",
       "type": "object"
-    }
+    },
+    "interrupts": [
+      {
+        "interrupt_type": "format_email",
+        "interrupt_payload": {
+          "$defs": {
+            "Message": {
+              "properties": {
+                "type": {
+                  "$ref": "#/$defs/Type",
+                  "description": "indicates the originator of the message, a human or an assistant"
+                },
+                "content": {
+                  "description": "the content of the message",
+                  "title": "Content",
+                  "type": "string"
+                }
+              },
+              "required": ["type", "content"],
+              "title": "Message",
+              "type": "object"
+            },
+            "Type": {
+              "enum": ["human", "assistant", "ai"],
+              "title": "Type",
+              "type": "string"
+            }
+          }
+        },
+        "resume_payload": {
+          "$defs": {
+            "Message": {
+              "properties": {
+                "type": {
+                  "$ref": "#/$defs/Type",
+                  "description": "indicates the originator of the message, a human or an assistant"
+                },
+                "content": {
+                  "description": "the content of the message",
+                  "title": "Content",
+                  "type": "string"
+                }
+              },
+              "required": ["type", "content"],
+              "title": "Message",
+              "type": "object"
+            },
+            "Type": {
+              "enum": ["human", "assistant", "ai"],
+              "title": "Type",
+              "type": "string"
+            }
+          }
+        }
+      }
+    ]
   },
   "deployment": {
     "deployment_options": [
@@ -174,4 +229,3 @@
     "dependencies": []
   }
 }
-
