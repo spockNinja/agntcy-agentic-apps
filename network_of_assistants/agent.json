@@ -1,0 +1,110 @@
+{
+  "name": "agntcy/network_of_assistants",
+  "version": "v0.1.0",
+  "schema_version": "v0.3.1",
+  "description": "A demonstration multi-agent system for routing and collaboration among specialized assistants to answer user queries effectively.",
+  "authors": ["Cisco Systems Inc."],
+  "annotations": {
+    "type": "multi-agent"
+  },
+  "created_at": "2025-04-24T12:00:00Z",
+  "skills": [
+    {
+      "category_name": "Natural Language Processing",
+      "category_uid": 1,
+      "class_name": "Dialogue Generation",
+      "class_uid": 10204
+    },
+    {
+      "category_name": "Natural Language Processing",
+      "category_uid": 1,
+      "class_name": "Knowledge Synthesis",
+      "class_uid": 10303
+    },
+    {
+      "category_name": "Natural Language Processing",
+      "category_uid": 1,
+      "class_name": "Contextual Comprehension",
+      "class_uid": 10101
+    },
+    {
+      "category_name": "Natural Language Processing",
+      "category_uid": 1,
+      "class_name": "Information Retrieval and Synthesis",
+      "class_uid": 103
+    },
+    {
+      "category_name": "Retrieval Augmented Generation",
+      "category_uid": 6,
+      "class_name": "Document Retrieval",
+      "class_uid": 60103
+    }
+  ],
+  "locators": [
+    {
+      "type": "source-code",
+      "url": "https://github.com/agntcy/agentic-apps/tree/main/network_of_assistants"
+    },
+    {
+      "type": "python-package",
+      "url": "https://github.com/agntcy/agentic-apps/tree/main/network_of_assistants/pyproject.toml"
+    }
+  ],
+  "extensions": [
+    {
+      "name": "schema.oasf.agntcy.org/features/runtime/framework",
+      "version": "v0.0.0",
+      "data": {
+        "sbom": {
+          "name": "network_of_assistants",
+          "packages": [
+            {
+              "name": "agp-bindings",
+              "version": "0.2.3"
+            },
+            {
+              "name": "langchain",
+              "version": ">=0.3.23"
+            },
+            {
+              "name": "langchain-openai",
+              "version": ">=0.3.12"
+            },
+            {
+              "name": "llama-index",
+              "version": ">=0.12.29"
+            },
+            {
+              "name": "llama-index-llms-azure-openai",
+              "version": ">=0.3.2"
+            },
+            {
+              "name": "llama-index-llms-ollama",
+              "version": ">=0.5.4"
+            },
+            {
+              "name": "llama-index-llms-openai-like",
+              "version": ">=0.3.4"
+            },
+            {
+              "name": "click",
+              "version": ">=8.1.8"
+            },
+            {
+              "name": "pydantic-settings",
+              "version": ">=2.8.1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "schema.oasf.agntcy.org/features/runtime/language",
+      "version": "v0.0.0",
+      "data": {
+        "type": "python",
+        "version": ">=3.13"
+      }
+    }
+  ]
+}
