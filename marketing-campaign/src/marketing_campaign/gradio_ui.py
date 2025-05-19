@@ -87,7 +87,14 @@ async def gradio_ui():
             answer = await chat_with_bot(
                 api_client, message=message, history=chat_history
             )
-            yield answer
+
+            edited_output = (
+                answer
+                + os.linesep
+                + os.linesep
+                + "When you are happy with the generated email type OK to continue"
+            )
+            yield edited_output
 
         demo = gr.ChatInterface(response, title="LangGraph Chat", type="messages")
 
