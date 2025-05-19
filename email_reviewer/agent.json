@@ -1,6 +1,6 @@
 {
   "name": "agntcy/email_reviewer",
-  "version": "v0.1.0",
+  "version": "v0.0.1",
   "schema_version": "v0.3.1",
   "description": "Agent in charge of reviewing and correcting emails addressed to a specific audience.",
   "authors": ["Cisco Systems Inc."],

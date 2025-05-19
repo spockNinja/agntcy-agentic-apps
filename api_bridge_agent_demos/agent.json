@@ -1,6 +1,6 @@
 {
   "name": "agntcy/api_bridge_agent_demos",
-  "version": "v0.1.0",
+  "version": "v0.0.1",
   "schema_version": "v0.3.1",
   "description": "Demo application of MCP and API Bridge Agent. Analyzes a Github repository and searches for related content using DuckDuckGo.",
   "authors": ["Cisco Systems Inc."],

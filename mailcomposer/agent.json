@@ -1,6 +1,6 @@
 {
   "name": "agntcy/mailcomposer",
-  "version": "v0.1.0",
+  "version": "v0.0.1",
   "schema_version": "v0.3.1",
   "description": "Assists in the composition of emails through a chat interface, collecting details until confirmation and delivering the finalized email.",
   "authors": ["Cisco Systems Inc."],

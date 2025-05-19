@@ -1,6 +1,6 @@
 {
   "name": "agntcy/remote_agent_agp",
-  "version": "v0.1.0",
+  "version": "v0.0.1",
   "schema_version": "v0.3.1",
   "description": "A demonstration application using AGP to connect a client, a gateway, and a remote agent to collaborate effectively.",
   "authors": ["Cisco Systems Inc."],
