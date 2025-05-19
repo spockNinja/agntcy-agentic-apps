@@ -191,7 +191,7 @@ def build_graph() -> CompiledStateGraph:
             "input_fields": [
                 "sender_email_address",
                 "recipient_email_address",
-                "mailcomposer_state.output.final_email",
+                "email_reviewer_state.output.corrected_email",
             ],
             "output_fields": [
                 FieldMetadata(
