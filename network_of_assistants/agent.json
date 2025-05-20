@@ -1,6 +1,6 @@
 {
   "name": "agntcy/network_of_assistants",
-  "version": "v0.1.0",
+  "version": "v0.0.1",
   "schema_version": "v0.3.1",
   "description": "A demonstration multi-agent system for routing and collaboration among specialized assistants to answer user queries effectively.",
   "authors": ["Cisco Systems Inc."],
