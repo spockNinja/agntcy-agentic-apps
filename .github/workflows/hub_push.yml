@@ -1,3 +1,6 @@
+# TODO: This pipeline does not work until CLI-driven login is implemented on hub/dir
+# Use /tools/hub-push.sh for pushing agents to the hub
+
 name: Push All Agents to Hub
 
 on:
