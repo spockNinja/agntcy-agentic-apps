@@ -1,6 +1,6 @@
 {
   "name": "agntcy/marketing-campaign",
-  "version": "v0.0.1",
+  "version": "v1.0.0",
   "schema_version": "v0.3.1",
   "description": "A multi-agent application to compose, review, and send marketing campaign emails.",
   "authors": ["Cisco Systems Inc."],
