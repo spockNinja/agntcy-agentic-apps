@@ -6,7 +6,8 @@ set -uo pipefail
 REPO="${REPO:-agntcy}"
 HUB_ADDRESS="${HUB_ADDRESS:-https://hub.agntcy.org}"
 DIRCTL_VERSION="${DIRCTL_VERSION:-v0.2.3}"
-TEMP_DIRCTL="./dirctl" # Temporary binary location if downloaded
+TEMP_DIRCTL="./dirctl"           # Temporary binary location if downloaded
+TEMP_AGENT="./signed-agent.json" # Temporary signed agent json location
 
 # Function to log messages and run a command, printing results
 log_and_run() {
@@ -37,6 +38,10 @@ log_and_run() {
 cleanup() {
   if [[ -f "$TEMP_DIRCTL" ]]; then
     log_and_run "Cleaning up temporary dirctl binary" "rm -f $TEMP_DIRCTL"
+  fi
+
+  if [[ -f "$TEMP_AGENT" ]]; then
+    log_and_run "Cleaning up temporary signed agent json" "rm -f $TEMP_AGENT"
   fi
 }
 trap cleanup EXIT # Ensure cleanup runs on script exit
@@ -80,11 +85,22 @@ for AGENT_PATH in $AGENT_FILES; do
   # Extract the agent name (parent directory of `agent.json`)
   AGENT_NAME=$(basename "$(dirname "$AGENT_PATH")")
 
-  log_and_run "Pushing agent: $AGENT_NAME (path: $AGENT_PATH)" "$DIRCTL_CMD hub push \"$REPO/$AGENT_NAME\" \"$AGENT_PATH\" --server-address \"$HUB_ADDRESS\""
-  PUSH_STATUS=$?
+  # Sign the agent
+  log_and_run "Signing agent: $AGENT_NAME (path: $AGENT_PATH)" "$DIRCTL_CMD sign \"$AGENT_PATH\" > $TEMP_AGENT"
+  SIGN_STATUS=$?
 
-  if [[ $PUSH_STATUS -ne 0 ]]; then
+  if [[ $SIGN_STATUS -eq 0 ]]; then
+    # Proceed to push only if signing was successful
+    log_and_run "Pushing agent: $AGENT_NAME" "$DIRCTL_CMD hub push \"$REPO/$AGENT_NAME\" $TEMP_AGENT --server-address \"$HUB_ADDRESS\""
+    PUSH_STATUS=$?
+
+    if [[ $PUSH_STATUS -ne 0 ]]; then
+      ALL_SUCCESS=1
+    fi
+  else
+    # Mark as failure if signing failed
     ALL_SUCCESS=1
+    echo "Signing failed for agent: $AGENT_NAME. Skipping push."
   fi
 
   echo -e "----------------------------------------"
