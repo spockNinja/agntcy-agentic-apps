@@ -49,11 +49,7 @@
   "locators": [
     {
       "type": "source-code",
-      "url": "https://github.com/agntcy/agentic-apps/tree/main/email_reviewer"
-    },
-    {
-      "type": "py-package",
-      "url": "https://github.com/agntcy/agentic-apps/tree/main/email_reviewer/pyproject.toml"
+      "url": "https://github.com/spockNinja/agntcy-agentic-apps/tree/main/email_reviewer"
     }
   ],
   "extensions": [ 
