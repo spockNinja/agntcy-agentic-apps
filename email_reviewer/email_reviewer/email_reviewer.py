@@ -113,6 +113,7 @@ class EmailReviewer(Workflow):
             self.llm = llm or OpenAI(
                 model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
                 api_key=os.getenv("OPENAI_API_KEY", "Fake"),
+                api_base=os.getenv("OPENAI_API_BASE")
             )
 
     @step
