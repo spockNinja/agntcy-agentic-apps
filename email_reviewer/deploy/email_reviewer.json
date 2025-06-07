@@ -101,7 +101,7 @@
                 "type": "boolean"
               },
               "corrected_email": {
-                "type": "null",
+                "type": "string",
                 "default": null,
                 "description": "The corrected version of the email, if changes were necessary",
                 "title": "Corrected Email"
